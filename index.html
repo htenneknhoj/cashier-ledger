@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Cashier Ledger</title>
+</head>
+<body>
+<style>
+:root{
+  --bg:#121C17;
+  --paper-line:#2C3A32;
+  --surface:#182620;
+  --surface-alt:#1D2E26;
+  --ink:#E9E5D6;
+  --ink-soft:#8FA093;
+  --green:#8FBB9C;
+  --green-deep:#C7DFC9;
+  --rust:#E2825B;
+  --gold:#D9B65B;
+  --gold-soft:#33301C;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --serif: Georgia, "Times New Roman", Cambria, serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+.app{ min-height:100%; display:flex; flex-direction:column; }
+
+.masthead{ padding:24px 28px 16px; border-bottom:2px solid var(--green); display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.masthead h1{ font-family:var(--serif); font-weight:700; font-size:24px; margin:0 0 4px; color:var(--green-deep); }
+.masthead p{ margin:0; color:var(--ink-soft); font-size:13px; }
+.masthead .who{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.masthead .who .id{ text-align:right; }
+.masthead .who .id .nm{ font-family:var(--serif); font-size:14px; color:var(--green-deep); }
+.masthead .who .id .rl{ font-family:var(--mono); font-size:11px; color:var(--gold); text-transform:uppercase; letter-spacing:.04em; }
+
+.body-wrap{ display:flex; flex:1; min-height:0; }
+.tab-rail{ width:190px; flex-shrink:0; padding:22px 0; border-right:1px solid var(--paper-line); display:flex; flex-direction:column; gap:2px; }
+.tab-btn{ text-align:left; background:none; border:none; cursor:pointer; font-family:var(--serif); font-size:15px; color:var(--ink-soft); padding:12px 22px; border-left:3px solid transparent; }
+.tab-btn:hover{ background:rgba(143,187,156,0.08); color:var(--ink); }
+.tab-btn.active{ color:var(--green-deep); border-left-color:var(--rust); background:var(--surface); font-weight:600; }
+.tab-btn .sub{ display:block; font-family:var(--sans); font-size:11px; color:var(--ink-soft); font-weight:400; margin-top:2px; }
+
+.content{ flex:1; padding:26px 32px 60px; overflow-y:auto; }
+.sheet{ max-width:1120px; margin:0 auto; background:var(--surface); border:1px solid var(--paper-line); }
+.sheet-header{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:18px 22px; border-bottom:1px solid var(--paper-line); }
+.sheet-header h2{ font-family:var(--serif); font-size:19px; margin:0; color:var(--green-deep); }
+.sheet-header .meta{ font-size:12.5px; color:var(--ink-soft); font-family:var(--mono); }
+.branch-filter{ display:flex; align-items:center; gap:8px; }
+.branch-filter select{ font-family:var(--mono); font-size:12.5px; background:var(--surface-alt); color:var(--ink); border:1px solid var(--paper-line); padding:6px 8px; }
+
+.section{ padding:20px 22px; border-bottom:1px solid var(--paper-line); }
+.section:last-child{ border-bottom:none; }
+.section h3{ font-family:var(--serif); font-size:15px; margin:0 0 3px; color:var(--green); }
+.section .hint{ font-size:12px; color:var(--ink-soft); margin:0 0 14px; }
+.review-banner{ display:inline-flex; align-items:center; gap:6px; background:var(--gold-soft); color:var(--gold); border:1px solid var(--gold); font-size:11.5px; padding:5px 10px; margin-bottom:12px; }
+
+.field-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
+.field{ display:flex; flex-direction:column; gap:5px; }
+.field label{ font-size:11.5px; color:var(--ink-soft); font-weight:500; }
+.field input, .field select, .field textarea{ font-family:var(--mono); font-size:13.5px; color:var(--ink); background:var(--surface-alt); border:1px solid var(--paper-line); padding:8px 9px; min-width:0; }
+.field input:disabled, .field select:disabled{ opacity:.6; }
+.field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--green); outline-offset:-1px; }
+.field.wide input{ font-family:var(--sans); }
+
+table.ledger{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
+table.ledger th{ text-align:right; font-family:var(--sans); font-weight:600; font-size:11px; color:var(--ink-soft); padding:6px 8px; border-bottom:1px solid var(--paper-line); }
+table.ledger th.txt, table.ledger th:first-child{ text-align:left; }
+table.ledger td{ padding:4px 6px; border-bottom:1px solid var(--paper-line); vertical-align:middle; }
+table.ledger input{ width:100%; font-family:var(--mono); font-size:13px; color:var(--ink); background:transparent; border:none; border-bottom:1px dashed transparent; padding:5px 3px; text-align:left; }
+table.ledger input.num-input{ text-align:right; }
+table.ledger input:focus{ outline:none; border-bottom:1px dashed var(--green); background:var(--gold-soft); }
+table.ledger tr:hover td{ background:rgba(143,187,156,0.05); }
+table.ledger td.readonly{ color:var(--green-deep); font-weight:600; text-align:right; font-family:var(--mono); }
+table.ledger tfoot td{ font-weight:600; border-top:2px solid var(--green); border-bottom:none; font-family:var(--mono); color:var(--green-deep); text-align:right; }
+table.ledger tfoot td:first-child{ text-align:left; font-family:var(--sans); }
+table.ledger td.del-col, table.ledger th.del-col{ width:28px; padding:4px 2px; }
+
+.row-del{ background:none; border:none; color:var(--rust); cursor:pointer; font-size:15px; padding:2px 6px; }
+.row-del:hover{ background:rgba(226,130,91,0.15); }
+.add-row{ margin-top:10px; background:none; border:1px dashed var(--ink-soft); color:var(--ink-soft); font-family:var(--sans); font-size:12px; padding:7px 12px; cursor:pointer; }
+.add-row:hover{ border-color:var(--green); color:var(--green); }
+
+.summary-strip{ display:flex; flex-wrap:wrap; gap:0; border:1px solid var(--paper-line); background:var(--surface-alt); }
+.summary-item{ flex:1; min-width:120px; padding:12px 16px; border-right:1px solid var(--paper-line); }
+.summary-item:last-child{ border-right:none; }
+.summary-item .lbl{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ink-soft); }
+.summary-item .val{ font-family:var(--mono); font-size:17px; font-weight:600; color:var(--green-deep); margin-top:3px; }
+.summary-item.warn .val{ color:var(--rust); }
+.summary-item.good .val{ color:var(--green); }
+
+.denom-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+.denom-card{ border:1px solid var(--paper-line); padding:9px 11px; background:var(--surface-alt); }
+.denom-card .den-label{ font-family:var(--mono); font-size:12px; color:var(--ink-soft); }
+.denom-card .den-calc{ display:flex; align-items:center; gap:6px; margin-top:5px; }
+.denom-card input{ width:56px; font-family:var(--mono); border:1px solid var(--paper-line); padding:5px; font-size:13px; background:var(--bg); color:var(--ink); text-align:right; }
+.denom-card .eq{ font-size:11px; color:var(--ink-soft); }
+.denom-card .subtotal{ font-family:var(--mono); font-size:13px; font-weight:600; color:var(--green-deep); }
+
+.upload-box{ border:2px dashed var(--paper-line); padding:22px; text-align:center; cursor:pointer; background:var(--surface-alt); }
+.upload-box:hover{ border-color:var(--green); background:#20332A; }
+.upload-box .icon{ font-size:22px; color:var(--green); }
+.upload-box .txt{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
+.thumbs{ display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; }
+.thumb{ position:relative; width:120px; }
+.thumb img{ width:120px; height:150px; object-fit:cover; border:1px solid var(--paper-line); display:block; }
+.thumb .rm{ position:absolute; top:-8px; right:-8px; width:20px; height:20px; border-radius:50%; background:var(--rust); color:#1B1210; border:none; cursor:pointer; font-size:12px; line-height:1; font-weight:700; }
+.thumb .fill-btn{ display:block; width:100%; margin-top:6px; font-family:var(--sans); font-size:11px; background:var(--gold-soft); color:var(--gold); border:1px solid var(--gold); padding:5px 0; cursor:pointer; }
+.thumb .fill-btn:hover{ background:var(--gold); color:#1B1210; }
+.thumb .fill-btn:disabled{ opacity:.6; cursor:wait; }
+.file-icon-box{ width:120px; height:150px; border:1px solid var(--paper-line); background:var(--surface-alt); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px; text-align:center; }
+.file-icon-box .ic{ font-size:26px; }
+.file-icon-box .fn{ font-size:10px; color:var(--ink-soft); margin-top:6px; word-break:break-all; max-height:44px; overflow:hidden; }
+
+.btn{ font-family:var(--sans); font-weight:600; font-size:13px; padding:10px 20px; border:1px solid var(--green); background:var(--green); color:#0E1712; cursor:pointer; }
+.btn:hover{ background:var(--green-deep); border-color:var(--green-deep); }
+.btn.secondary{ background:none; color:var(--green-deep); border-color:var(--paper-line); }
+.btn.secondary:hover{ background:rgba(143,187,156,0.1); border-color:var(--green); }
+.btn.danger{ background:none; border-color:var(--rust); color:var(--rust); }
+.btn.danger:hover{ background:rgba(226,130,91,0.12); }
+.actions-bar{ display:flex; justify-content:flex-end; gap:10px; padding:18px 22px; }
+.pill-btn{ padding:7px 14px; font-size:12px; }
+.pill-btn.active-pill{ background:var(--green); color:#0E1712; border-color:var(--green); }
+.seed-link{ background:none; border:none; color:var(--gold); font-size:11.5px; cursor:pointer; text-decoration:underline; padding:0; }
+
+.history-list{ display:flex; flex-direction:column; gap:10px; padding:20px 22px; }
+.history-card{ border:1px solid var(--paper-line); background:var(--surface-alt); }
+.history-card .hc-head{ display:flex; justify-content:space-between; align-items:center; padding:13px 16px; cursor:pointer; gap:12px; flex-wrap:wrap; }
+.history-card .hc-date{ font-family:var(--serif); font-weight:600; font-size:15px; color:var(--green-deep); }
+.history-card .hc-sub{ font-size:11.5px; color:var(--ink-soft); font-family:var(--mono); }
+.history-card .hc-figs{ display:flex; gap:18px; font-family:var(--mono); font-size:12.5px; }
+.history-card .hc-figs .f-lbl{ color:var(--ink-soft); font-size:10px; display:block; }
+.history-card .hc-body{ border-top:1px solid var(--paper-line); padding:16px; display:none; }
+.history-card.open .hc-body{ display:block; }
+.chev{ color:var(--ink-soft); }
+.history-card.open .chev{ transform:rotate(90deg); display:inline-block; }
+.empty-state{ padding:50px 22px; text-align:center; color:var(--ink-soft); }
+.empty-state .big{ font-family:var(--serif); font-size:16px; color:var(--ink); margin-bottom:6px; }
+.pill{ display:inline-block; font-family:var(--mono); font-size:10.5px; padding:2px 7px; border:1px solid var(--paper-line); color:var(--ink-soft); }
+
+.week-picker{ display:flex; gap:10px; align-items:flex-end; padding:18px 22px; border-bottom:1px solid var(--paper-line); flex-wrap:wrap; }
+table.weekly{ width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
+table.weekly th, table.weekly td{ padding:8px 10px; border-bottom:1px solid var(--paper-line); text-align:right; }
+table.weekly th{ font-family:var(--sans); color:var(--ink-soft); font-size:11px; font-weight:600; }
+table.weekly th:first-child, table.weekly td:first-child{ text-align:left; }
+table.weekly td:first-child{ font-family:var(--serif); font-weight:600; color:var(--green-deep); }
+table.weekly td{ font-family:var(--mono); }
+table.weekly tfoot td{ font-weight:700; border-top:2px solid var(--green); border-bottom:none; }
+.zero{ color:#4C5B51; }
+.small-note{ font-size:11.5px; color:var(--ink-soft); padding:14px 22px 0; }
+
+table.logs{ width:100%; border-collapse:collapse; font-size:12.5px; }
+table.logs th{ text-align:left; font-family:var(--sans); font-weight:600; font-size:11px; color:var(--ink-soft); padding:7px 9px; border-bottom:1px solid var(--paper-line); }
+table.logs td{ padding:7px 9px; border-bottom:1px solid var(--paper-line); font-family:var(--mono); }
+table.logs .act-error{ color:var(--rust); }
+table.logs .act-ok{ color:var(--green); }
+
+.login-wrap{ flex:1; display:flex; align-items:center; justify-content:center; padding:40px 20px; }
+.login-card{ width:100%; max-width:400px; background:var(--surface); border:1px solid var(--paper-line); padding:30px 28px; }
+.login-card h2{ font-family:var(--serif); font-size:20px; color:var(--green-deep); margin:0 0 6px; }
+.login-card p.sub{ color:var(--ink-soft); font-size:12.5px; margin:0 0 22px; }
+.login-card .field{ margin-bottom:14px; }
+.login-card .field label{ font-size:12px; margin-bottom:5px; }
+.login-card .field input, .login-card .field select{ width:100%; padding:10px; font-size:14px; }
+.login-note{ font-size:11px; color:var(--ink-soft); margin-top:16px; border-top:1px solid var(--paper-line); padding-top:12px; }
+.trend-chart-wrap svg{ width:100%; height:auto; display:block; }
+
+@media (max-width:760px){
+  .body-wrap{ flex-direction:column; }
+  .tab-rail{ width:100%; flex-direction:row; overflow-x:auto; border-right:none; border-bottom:1px solid var(--paper-line); padding:10px 8px; }
+  .tab-btn{ border-left:none; border-bottom:3px solid transparent; white-space:nowrap; }
+  .tab-btn.active{ border-left-color:transparent; border-bottom-color:var(--rust); }
+  .content{ padding:16px; }
+  .history-card .hc-figs{ display:none; }
+  .masthead .who .id{ display:none; }
+}
+</style>
+
+<div class="app" id="appRoot"></div>
+
+<script>
+(function(){
+'use strict';
+
+// Storage-readiness handshake with the Firebase module script below.
+// The Firebase <script type="module"> sets window.storage once it connects,
+// then calls window.__markStorageReady(). We wait for that (with a timeout)
+// before deciding whether real storage is available.
+window.storageReady = new Promise(function(resolve){ window.__markStorageReady = resolve; });
+
+/* ============================== CONSTANTS ============================== */
+var ROLES = {
+  dev:      { label:'Dev',     tabs:['new','trends','history','weekly','logs'] },
+  cashier:  { label:'Cashier', tabs:['new','history'] },
+  manager:  { label:'Manager', tabs:['trends','history','weekly'] },
+  owner:    { label:'Owner',   tabs:['trends','history','weekly'] }
+};
+var TAB_META = {
+  new:     {label:'New report',     sub:"Enter today's figures"},
+  trends:  {label:'Trends',         sub:'Visualize over time'},
+  history: {label:'Report history', sub:'Past entries'},
+  weekly:  {label:'Weekly summary', sub:'Per-collector totals'},
+  logs:    {label:'Activity log',   sub:'All actions (dev only)'}
+};
+var METRICS = {
+  collection: {label:'Collection'},
+  savings:    {label:'Savings'},
+  netRelease: {label:'Net releases'},
+  expenses:   {label:'Expenses'}
+};
+var COLLECTOR_COLORS = ['#D9B65B','#8FBB9C','#E2825B','#7FA8D9','#C48FD9','#6EC6C0','#D98F8F'];
+var EMBEDDED_DEMO_REPORTS = [{"id":"2026-07-08-seed-wx4yn2","date":"2026-07-08","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"85759","collectors":[{"name":"Casanova","fareGas":"189","edc":"21510","advance":"1486","collection":"26683","savings":"4166"},{"name":"Magno","fareGas":"244","edc":"12661","advance":"207","collection":"15133","savings":"2520"},{"name":"Josol","fareGas":"290","edc":"13438","advance":"262","collection":"9965","savings":"1299"},{"name":"Rabanes","fareGas":"183","edc":"13974","advance":"631","collection":"14952","savings":"1112"},{"name":"Bulic","fareGas":"207","edc":"13351","advance":"142","collection":"17614","savings":"1185"}],"releases":[{"fo":"Bulic","borrower":"Domingo, Rey","loan":"38000","notary":"50","fees1":"380","fees34":"1520","advance":"259"},{"fo":"Casanova","borrower":"Reyes, Jun","loan":"19000","notary":"50","fees1":"190","fees34":"760","advance":"906"}],"expenses":[{"label":"Gas","amount":"910"},{"label":"DLM","amount":"2934"},{"label":"Fees","amount":"1133"},{"label":"Notary","amount":"306"},{"label":"E-Fund","amount":"215"},{"label":"Company","amount":"918"},{"label":"Employee","amount":"453"}],"denom":{"d1000":"22","d500":"30","d200":"3","d100":"65","d50":"53","d20":"4","coins":"424"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-09-seed-i4bcjf","date":"2026-07-09","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"84708","collectors":[{"name":"Casanova","fareGas":"201","edc":"23641","advance":"1502","collection":"24153","savings":"4294"},{"name":"Magno","fareGas":"179","edc":"12132","advance":"84","collection":"16428","savings":"2324"},{"name":"Josol","fareGas":"265","edc":"11763","advance":"641","collection":"11050","savings":"1498"},{"name":"Rabanes","fareGas":"198","edc":"13767","advance":"880","collection":"15342","savings":"1050"},{"name":"Bulic","fareGas":"186","edc":"13151","advance":"278","collection":"15910","savings":"1016"}],"releases":[{"fo":"Magno","borrower":"Domingo, Rey","loan":"40000","notary":"50","fees1":"400","fees34":"1600","advance":"453"},{"fo":"Rabanes","borrower":"Catlabayan, Val","loan":"27000","notary":"50","fees1":"270","fees34":"810","advance":"371"},{"fo":"Casanova","borrower":"Reyes, Jun","loan":"33000","notary":"50","fees1":"330","fees34":"990","advance":"1211"}],"expenses":[{"label":"Gas","amount":"1019"},{"label":"DLM","amount":"3077"},{"label":"Fees","amount":"1050"},{"label":"Notary","amount":"367"},{"label":"E-Fund","amount":"242"},{"label":"Company","amount":"1122"},{"label":"Employee","amount":"443"}],"denom":{"d1000":"28","d500":"26","d200":"3","d100":"104","d50":"89","d20":"6","coins":"496"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-10-seed-4jibtf","date":"2026-07-10","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"84004","collectors":[{"name":"Casanova","fareGas":"138","edc":"22587","advance":"1258","collection":"24255","savings":"4174"},{"name":"Magno","fareGas":"249","edc":"12817","advance":"108","collection":"15766","savings":"2459"},{"name":"Josol","fareGas":"327","edc":"11732","advance":"587","collection":"10526","savings":"1332"},{"name":"Rabanes","fareGas":"218","edc":"13853","advance":"458","collection":"15110","savings":"809"},{"name":"Bulic","fareGas":"176","edc":"13864","advance":"195","collection":"16305","savings":"1083"}],"releases":[{"fo":"Magno","borrower":"Quintas, Siriano","loan":"33000","notary":"50","fees1":"330","fees34":"990","advance":"1522"},{"fo":"Magno","borrower":"Manalo, Fe","loan":"27000","notary":"50","fees1":"270","fees34":"810","advance":"1788"}],"expenses":[{"label":"Gas","amount":"1001"},{"label":"DLM","amount":"3303"},{"label":"Fees","amount":"901"},{"label":"Notary","amount":"305"},{"label":"E-Fund","amount":"251"},{"label":"Company","amount":"1100"},{"label":"Employee","amount":"428"}],"denom":{"d1000":"20","d500":"21","d200":"1","d100":"84","d50":"38","d20":"2","coins":"442"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-11-seed-sk1c3z","date":"2026-07-11","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"83047","collectors":[{"name":"Casanova","fareGas":"194","edc":"21192","advance":"1264","collection":"24394","savings":"4206"},{"name":"Magno","fareGas":"248","edc":"10800","advance":"263","collection":"17651","savings":"2930"},{"name":"Josol","fareGas":"301","edc":"10841","advance":"682","collection":"11230","savings":"980"},{"name":"Rabanes","fareGas":"236","edc":"13419","advance":"895","collection":"15301","savings":"889"},{"name":"Bulic","fareGas":"184","edc":"13181","advance":"120","collection":"17067","savings":"1186"}],"releases":[{"fo":"Bulic","borrower":"Catlabayan, Val","loan":"40000","notary":"50","fees1":"400","fees34":"1200","advance":"1673"},{"fo":"Rabanes","borrower":"Gabacat, Gina","loan":"20000","notary":"50","fees1":"200","fees34":"600","advance":"1880"}],"expenses":[{"label":"Gas","amount":"990"},{"label":"DLM","amount":"3131"},{"label":"Fees","amount":"1116"},{"label":"Notary","amount":"324"},{"label":"E-Fund","amount":"255"},{"label":"Company","amount":"902"},{"label":"Employee","amount":"455"}],"denom":{"d1000":"24","d500":"22","d200":"2","d100":"79","d50":"77","d20":"5","coins":"550"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-13-seed-ptj1kr","date":"2026-07-13","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"78062","collectors":[{"name":"Casanova","fareGas":"167","edc":"23668","advance":"1478","collection":"24330","savings":"4370"},{"name":"Magno","fareGas":"192","edc":"11940","advance":"184","collection":"16404","savings":"2295"},{"name":"Josol","fareGas":"262","edc":"12638","advance":"516","collection":"10431","savings":"1114"},{"name":"Rabanes","fareGas":"232","edc":"13641","advance":"741","collection":"14939","savings":"946"},{"name":"Bulic","fareGas":"204","edc":"13274","advance":"273","collection":"16021","savings":"1028"}],"releases":[{"fo":"Casanova","borrower":"Domingo, Rey","loan":"39000","notary":"50","fees1":"390","fees34":"1560","advance":"1823"},{"fo":"Josol","borrower":"Catlabayan, Val","loan":"40000","notary":"50","fees1":"400","fees34":"1200","advance":"239"},{"fo":"Bulic","borrower":"Perez, Analyn","loan":"26000","notary":"50","fees1":"260","fees34":"780","advance":"837"}],"expenses":[{"label":"Gas","amount":"1128"},{"label":"DLM","amount":"3253"},{"label":"Fees","amount":"948"},{"label":"Notary","amount":"389"},{"label":"E-Fund","amount":"252"},{"label":"Company","amount":"1100"},{"label":"Employee","amount":"471"}],"denom":{"d1000":"26","d500":"21","d200":"3","d100":"60","d50":"56","d20":"2","coins":"689"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-14-seed-urvgzj","date":"2026-07-14","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"84177","collectors":[{"name":"Casanova","fareGas":"195","edc":"23212","advance":"2120","collection":"24327","savings":"3963"},{"name":"Magno","fareGas":"247","edc":"12295","advance":"153","collection":"17125","savings":"2625"},{"name":"Josol","fareGas":"323","edc":"13272","advance":"354","collection":"11227","savings":"1186"},{"name":"Rabanes","fareGas":"223","edc":"13852","advance":"837","collection":"15089","savings":"1078"},{"name":"Bulic","fareGas":"162","edc":"13160","advance":"124","collection":"18001","savings":"929"}],"releases":[{"fo":"Josol","borrower":"Quintas, Siriano","loan":"41000","notary":"50","fees1":"410","fees34":"1640","advance":"1857"},{"fo":"Rabanes","borrower":"Cruz, Bebeth","loan":"28000","notary":"50","fees1":"280","fees34":"840","advance":"557"}],"expenses":[{"label":"Gas","amount":"911"},{"label":"DLM","amount":"3311"},{"label":"Fees","amount":"1122"},{"label":"Notary","amount":"368"},{"label":"E-Fund","amount":"197"},{"label":"Company","amount":"1040"},{"label":"Employee","amount":"477"}],"denom":{"d1000":"27","d500":"24","d200":"2","d100":"89","d50":"45","d20":"5","coins":"652"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-15-seed-edbs6f","date":"2026-07-15","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"83369","collectors":[{"name":"Casanova","fareGas":"151","edc":"23297","advance":"1333","collection":"24588","savings":"4099"},{"name":"Magno","fareGas":"207","edc":"11042","advance":"233","collection":"14675","savings":"2381"},{"name":"Josol","fareGas":"323","edc":"11776","advance":"400","collection":"10059","savings":"1380"},{"name":"Rabanes","fareGas":"217","edc":"13556","advance":"525","collection":"15401","savings":"1087"},{"name":"Bulic","fareGas":"219","edc":"13163","advance":"144","collection":"17245","savings":"1021"}],"releases":[{"fo":"Josol","borrower":"Manalo, Fe","loan":"11000","notary":"50","fees1":"110","fees34":"440","advance":"1104"}],"expenses":[{"label":"Gas","amount":"1087"},{"label":"DLM","amount":"3114"},{"label":"Fees","amount":"934"},{"label":"Notary","amount":"338"},{"label":"E-Fund","amount":"228"},{"label":"Company","amount":"907"},{"label":"Employee","amount":"482"}],"denom":{"d1000":"20","d500":"36","d200":"3","d100":"98","d50":"53","d20":"2","coins":"586"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-16-seed-e8otzk","date":"2026-07-16","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"80835","collectors":[{"name":"Casanova","fareGas":"199","edc":"21743","advance":"1675","collection":"24945","savings":"4372"},{"name":"Magno","fareGas":"222","edc":"13051","advance":"219","collection":"16401","savings":"2605"},{"name":"Josol","fareGas":"287","edc":"12121","advance":"673","collection":"10273","savings":"1142"},{"name":"Rabanes","fareGas":"209","edc":"14098","advance":"434","collection":"15158","savings":"1122"},{"name":"Bulic","fareGas":"189","edc":"13404","advance":"248","collection":"15882","savings":"933"}],"releases":[{"fo":"Bulic","borrower":"Manalo, Fe","loan":"33000","notary":"50","fees1":"330","fees34":"1320","advance":"556"},{"fo":"Casanova","borrower":"Domingo, Rey","loan":"11000","notary":"50","fees1":"110","fees34":"330","advance":"874"}],"expenses":[{"label":"Gas","amount":"958"},{"label":"DLM","amount":"2915"},{"label":"Fees","amount":"1132"},{"label":"Notary","amount":"354"},{"label":"E-Fund","amount":"235"},{"label":"Company","amount":"1015"},{"label":"Employee","amount":"456"}],"denom":{"d1000":"23","d500":"25","d200":"0","d100":"83","d50":"87","d20":"4","coins":"690"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-17-seed-zoekwx","date":"2026-07-17","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"87574","collectors":[{"name":"Casanova","fareGas":"177","edc":"22336","advance":"2373","collection":"23757","savings":"4169"},{"name":"Magno","fareGas":"239","edc":"10776","advance":"264","collection":"17720","savings":"2503"},{"name":"Josol","fareGas":"285","edc":"12756","advance":"232","collection":"10529","savings":"1343"},{"name":"Rabanes","fareGas":"199","edc":"14163","advance":"403","collection":"15033","savings":"1005"},{"name":"Bulic","fareGas":"199","edc":"13878","advance":"148","collection":"17709","savings":"1092"}],"releases":[{"fo":"Rabanes","borrower":"Manalo, Fe","loan":"37000","notary":"50","fees1":"370","fees34":"1110","advance":"514"},{"fo":"Rabanes","borrower":"Catlabayan, Val","loan":"27000","notary":"50","fees1":"270","fees34":"810","advance":"80"},{"fo":"Casanova","borrower":"Catlabayan, Val","loan":"14000","notary":"50","fees1":"140","fees34":"420","advance":"228"}],"expenses":[{"label":"Gas","amount":"904"},{"label":"DLM","amount":"3220"},{"label":"Fees","amount":"1037"},{"label":"Notary","amount":"353"},{"label":"E-Fund","amount":"239"},{"label":"Company","amount":"1032"},{"label":"Employee","amount":"490"}],"denom":{"d1000":"29","d500":"33","d200":"2","d100":"110","d50":"54","d20":"6","coins":"487"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-18-seed-gznh7i","date":"2026-07-18","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"84893","collectors":[{"name":"Casanova","fareGas":"182","edc":"23902","advance":"1686","collection":"25216","savings":"4063"},{"name":"Magno","fareGas":"188","edc":"11699","advance":"171","collection":"17644","savings":"2488"},{"name":"Josol","fareGas":"325","edc":"12261","advance":"311","collection":"10779","savings":"904"},{"name":"Rabanes","fareGas":"174","edc":"13513","advance":"503","collection":"15156","savings":"870"},{"name":"Bulic","fareGas":"180","edc":"13306","advance":"137","collection":"16267","savings":"1284"}],"releases":[{"fo":"Magno","borrower":"Cruz, Bebeth","loan":"36000","notary":"50","fees1":"360","fees34":"1080","advance":"67"},{"fo":"Casanova","borrower":"Castillo, Mercedez","loan":"15000","notary":"50","fees1":"150","fees34":"450","advance":"1057"}],"expenses":[{"label":"Gas","amount":"997"},{"label":"DLM","amount":"2997"},{"label":"Fees","amount":"992"},{"label":"Notary","amount":"372"},{"label":"E-Fund","amount":"251"},{"label":"Company","amount":"1019"},{"label":"Employee","amount":"474"}],"denom":{"d1000":"29","d500":"29","d200":"1","d100":"99","d50":"34","d20":"6","coins":"448"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-20-seed-xl6v52","date":"2026-07-20","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"86242","collectors":[{"name":"Casanova","fareGas":"149","edc":"24377","advance":"1398","collection":"23665","savings":"4134"},{"name":"Magno","fareGas":"219","edc":"12165","advance":"164","collection":"17685","savings":"2744"},{"name":"Josol","fareGas":"307","edc":"11853","advance":"622","collection":"11112","savings":"1398"},{"name":"Rabanes","fareGas":"254","edc":"13561","advance":"543","collection":"15249","savings":"907"},{"name":"Bulic","fareGas":"209","edc":"13681","advance":"126","collection":"15155","savings":"1153"}],"releases":[{"fo":"Josol","borrower":"Domingo, Rey","loan":"8000","notary":"50","fees1":"80","fees34":"240","advance":"396"},{"fo":"Rabanes","borrower":"Castillo, Mercedez","loan":"17000","notary":"50","fees1":"170","fees34":"510","advance":"836"}],"expenses":[{"label":"Gas","amount":"948"},{"label":"DLM","amount":"3298"},{"label":"Fees","amount":"1069"},{"label":"Notary","amount":"328"},{"label":"E-Fund","amount":"194"},{"label":"Company","amount":"982"},{"label":"Employee","amount":"428"}],"denom":{"d1000":"27","d500":"33","d200":"2","d100":"88","d50":"64","d20":"4","coins":"589"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-21-seed-aeki7k","date":"2026-07-21","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"82945","collectors":[{"name":"Casanova","fareGas":"193","edc":"23069","advance":"2054","collection":"26234","savings":"4051"},{"name":"Magno","fareGas":"181","edc":"11511","advance":"289","collection":"16806","savings":"2909"},{"name":"Josol","fareGas":"274","edc":"11130","advance":"217","collection":"10487","savings":"1029"},{"name":"Rabanes","fareGas":"173","edc":"13490","advance":"799","collection":"15239","savings":"1115"},{"name":"Bulic","fareGas":"207","edc":"13290","advance":"115","collection":"17290","savings":"1092"}],"releases":[{"fo":"Bulic","borrower":"Manalo, Fe","loan":"41000","notary":"50","fees1":"410","fees34":"1230","advance":"1710"}],"expenses":[{"label":"Gas","amount":"1081"},{"label":"DLM","amount":"3354"},{"label":"Fees","amount":"998"},{"label":"Notary","amount":"380"},{"label":"E-Fund","amount":"202"},{"label":"Company","amount":"1005"},{"label":"Employee","amount":"442"}],"denom":{"d1000":"20","d500":"23","d200":"1","d100":"94","d50":"33","d20":"3","coins":"429"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-22-seed-yx41eb","date":"2026-07-22","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"87049","collectors":[{"name":"Casanova","fareGas":"181","edc":"24144","advance":"1953","collection":"27032","savings":"4365"},{"name":"Magno","fareGas":"249","edc":"10749","advance":"223","collection":"14550","savings":"2769"},{"name":"Josol","fareGas":"320","edc":"13405","advance":"598","collection":"10261","savings":"975"},{"name":"Rabanes","fareGas":"228","edc":"13873","advance":"612","collection":"15052","savings":"1061"},{"name":"Bulic","fareGas":"190","edc":"13408","advance":"232","collection":"16011","savings":"956"}],"releases":[{"fo":"Casanova","borrower":"Catlabayan, Val","loan":"22000","notary":"50","fees1":"220","fees34":"880","advance":"1855"},{"fo":"Casanova","borrower":"Quintas, Siriano","loan":"44000","notary":"50","fees1":"440","fees34":"1320","advance":"1621"}],"expenses":[{"label":"Gas","amount":"958"},{"label":"DLM","amount":"3174"},{"label":"Fees","amount":"1089"},{"label":"Notary","amount":"372"},{"label":"E-Fund","amount":"213"},{"label":"Company","amount":"989"},{"label":"Employee","amount":"465"}],"denom":{"d1000":"23","d500":"21","d200":"2","d100":"99","d50":"37","d20":"6","coins":"460"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-23-seed-z10uvb","date":"2026-07-23","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"85343","collectors":[{"name":"Casanova","fareGas":"208","edc":"23439","advance":"2094","collection":"23951","savings":"4056"},{"name":"Magno","fareGas":"244","edc":"11481","advance":"281","collection":"17743","savings":"3078"},{"name":"Josol","fareGas":"321","edc":"13509","advance":"307","collection":"10907","savings":"1132"},{"name":"Rabanes","fareGas":"191","edc":"14195","advance":"776","collection":"15328","savings":"1029"},{"name":"Bulic","fareGas":"216","edc":"13576","advance":"178","collection":"17908","savings":"1281"}],"releases":[{"fo":"Rabanes","borrower":"Domingo, Rey","loan":"13000","notary":"50","fees1":"130","fees34":"520","advance":"2170"},{"fo":"Casanova","borrower":"Manalo, Fe","loan":"32000","notary":"50","fees1":"320","fees34":"960","advance":"1427"}],"expenses":[{"label":"Gas","amount":"925"},{"label":"DLM","amount":"3266"},{"label":"Fees","amount":"1029"},{"label":"Notary","amount":"377"},{"label":"E-Fund","amount":"190"},{"label":"Company","amount":"1015"},{"label":"Employee","amount":"437"}],"denom":{"d1000":"26","d500":"35","d200":"0","d100":"86","d50":"89","d20":"4","coins":"586"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-24-seed-plahh0","date":"2026-07-24","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"81344","collectors":[{"name":"Casanova","fareGas":"185","edc":"23362","advance":"1957","collection":"26432","savings":"4066"},{"name":"Magno","fareGas":"179","edc":"11867","advance":"71","collection":"15621","savings":"2584"},{"name":"Josol","fareGas":"282","edc":"13233","advance":"614","collection":"10820","savings":"1045"},{"name":"Rabanes","fareGas":"231","edc":"13932","advance":"849","collection":"15178","savings":"880"},{"name":"Bulic","fareGas":"204","edc":"13434","advance":"116","collection":"17906","savings":"952"}],"releases":[{"fo":"Magno","borrower":"Cruz, Bebeth","loan":"33000","notary":"50","fees1":"330","fees34":"990","advance":"489"},{"fo":"Rabanes","borrower":"Reyes, Jun","loan":"19000","notary":"50","fees1":"190","fees34":"570","advance":"942"}],"expenses":[{"label":"Gas","amount":"1149"},{"label":"DLM","amount":"3101"},{"label":"Fees","amount":"962"},{"label":"Notary","amount":"357"},{"label":"E-Fund","amount":"241"},{"label":"Company","amount":"1022"},{"label":"Employee","amount":"494"}],"denom":{"d1000":"30","d500":"21","d200":"2","d100":"100","d50":"82","d20":"4","coins":"446"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-25-seed-n9hcuh","date":"2026-07-25","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"81962","collectors":[{"name":"Casanova","fareGas":"153","edc":"23330","advance":"998","collection":"23610","savings":"4185"},{"name":"Magno","fareGas":"228","edc":"13044","advance":"256","collection":"15029","savings":"2954"},{"name":"Josol","fareGas":"272","edc":"13261","advance":"582","collection":"9929","savings":"994"},{"name":"Rabanes","fareGas":"194","edc":"13989","advance":"505","collection":"15275","savings":"857"},{"name":"Bulic","fareGas":"218","edc":"13354","advance":"128","collection":"16070","savings":"1141"}],"releases":[{"fo":"Bulic","borrower":"Cruz, Bebeth","loan":"22000","notary":"50","fees1":"220","fees34":"880","advance":"248"},{"fo":"Bulic","borrower":"Reyes, Jun","loan":"32000","notary":"50","fees1":"320","fees34":"1280","advance":"437"}],"expenses":[{"label":"Gas","amount":"1102"},{"label":"DLM","amount":"3275"},{"label":"Fees","amount":"1027"},{"label":"Notary","amount":"390"},{"label":"E-Fund","amount":"182"},{"label":"Company","amount":"947"},{"label":"Employee","amount":"471"}],"denom":{"d1000":"24","d500":"34","d200":"1","d100":"80","d50":"67","d20":"5","coins":"404"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-27-seed-fr4pdn","date":"2026-07-27","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"79527","collectors":[{"name":"Casanova","fareGas":"199","edc":"23128","advance":"1404","collection":"24708","savings":"3983"},{"name":"Magno","fareGas":"201","edc":"13297","advance":"280","collection":"17658","savings":"2321"},{"name":"Josol","fareGas":"293","edc":"12613","advance":"381","collection":"11067","savings":"1096"},{"name":"Rabanes","fareGas":"252","edc":"13909","advance":"458","collection":"15227","savings":"1062"},{"name":"Bulic","fareGas":"215","edc":"13655","advance":"209","collection":"15919","savings":"1179"}],"releases":[{"fo":"Magno","borrower":"Domingo, Rey","loan":"24000","notary":"50","fees1":"240","fees34":"720","advance":"583"},{"fo":"Josol","borrower":"Jacildo, Angelica","loan":"14000","notary":"50","fees1":"140","fees34":"560","advance":"1653"}],"expenses":[{"label":"Gas","amount":"1013"},{"label":"DLM","amount":"2980"},{"label":"Fees","amount":"1092"},{"label":"Notary","amount":"368"},{"label":"E-Fund","amount":"246"},{"label":"Company","amount":"1123"},{"label":"Employee","amount":"509"}],"denom":{"d1000":"24","d500":"22","d200":"1","d100":"107","d50":"90","d20":"3","coins":"661"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-28-seed-60268s","date":"2026-07-28","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"79540","collectors":[{"name":"Casanova","fareGas":"135","edc":"23940","advance":"2359","collection":"26050","savings":"4370"},{"name":"Magno","fareGas":"227","edc":"12542","advance":"180","collection":"16550","savings":"3064"},{"name":"Josol","fareGas":"290","edc":"13327","advance":"286","collection":"11202","savings":"1210"},{"name":"Rabanes","fareGas":"254","edc":"13819","advance":"787","collection":"15279","savings":"982"},{"name":"Bulic","fareGas":"158","edc":"13781","advance":"287","collection":"17170","savings":"1043"}],"releases":[{"fo":"Rabanes","borrower":"Jacildo, Angelica","loan":"29000","notary":"50","fees1":"290","fees34":"1160","advance":"1600"},{"fo":"Bulic","borrower":"Manalo, Fe","loan":"26000","notary":"50","fees1":"260","fees34":"1040","advance":"580"}],"expenses":[{"label":"Gas","amount":"903"},{"label":"DLM","amount":"3374"},{"label":"Fees","amount":"1129"},{"label":"Notary","amount":"346"},{"label":"E-Fund","amount":"185"},{"label":"Company","amount":"1085"},{"label":"Employee","amount":"445"}],"denom":{"d1000":"21","d500":"21","d200":"3","d100":"76","d50":"70","d20":"5","coins":"564"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-29-seed-ik1fr5","date":"2026-07-29","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"80140","collectors":[{"name":"Casanova","fareGas":"167","edc":"22785","advance":"2055","collection":"25761","savings":"3979"},{"name":"Magno","fareGas":"185","edc":"12111","advance":"144","collection":"16192","savings":"3104"},{"name":"Josol","fareGas":"311","edc":"11541","advance":"379","collection":"10086","savings":"1011"},{"name":"Rabanes","fareGas":"181","edc":"13690","advance":"574","collection":"15223","savings":"1010"},{"name":"Bulic","fareGas":"163","edc":"13618","advance":"125","collection":"16963","savings":"1124"}],"releases":[{"fo":"Josol","borrower":"Perez, Analyn","loan":"17000","notary":"50","fees1":"170","fees34":"510","advance":"587"},{"fo":"Casanova","borrower":"Jacildo, Angelica","loan":"18000","notary":"50","fees1":"180","fees34":"540","advance":"1293"}],"expenses":[{"label":"Gas","amount":"1007"},{"label":"DLM","amount":"3300"},{"label":"Fees","amount":"947"},{"label":"Notary","amount":"329"},{"label":"E-Fund","amount":"259"},{"label":"Company","amount":"1045"},{"label":"Employee","amount":"434"}],"denom":{"d1000":"20","d500":"28","d200":"2","d100":"99","d50":"40","d20":"2","coins":"658"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-30-seed-jbo3kx","date":"2026-07-30","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"84960","collectors":[{"name":"Casanova","fareGas":"209","edc":"23712","advance":"1678","collection":"23839","savings":"4122"},{"name":"Magno","fareGas":"254","edc":"10654","advance":"37","collection":"15548","savings":"2609"},{"name":"Josol","fareGas":"261","edc":"13409","advance":"565","collection":"11167","savings":"1208"},{"name":"Rabanes","fareGas":"253","edc":"14061","advance":"784","collection":"15263","savings":"869"},{"name":"Bulic","fareGas":"206","edc":"13006","advance":"242","collection":"15515","savings":"919"}],"releases":[{"fo":"Rabanes","borrower":"Castillo, Mercedez","loan":"39000","notary":"50","fees1":"390","fees34":"1560","advance":"534"},{"fo":"Magno","borrower":"Reyes, Jun","loan":"13000","notary":"50","fees1":"130","fees34":"520","advance":"1553"},{"fo":"Casanova","borrower":"Quintas, Siriano","loan":"30000","notary":"50","fees1":"300","fees34":"1200","advance":"146"}],"expenses":[{"label":"Gas","amount":"981"},{"label":"DLM","amount":"3180"},{"label":"Fees","amount":"1131"},{"label":"Notary","amount":"327"},{"label":"E-Fund","amount":"222"},{"label":"Company","amount":"909"},{"label":"Employee","amount":"498"}],"denom":{"d1000":"24","d500":"23","d200":"3","d100":"87","d50":"36","d20":"5","coins":"619"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-07-31-seed-sbd0n8","date":"2026-07-31","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"82559","collectors":[{"name":"Casanova","fareGas":"205","edc":"24028","advance":"1324","collection":"23584","savings":"3925"},{"name":"Magno","fareGas":"244","edc":"12596","advance":"210","collection":"16864","savings":"2487"},{"name":"Josol","fareGas":"278","edc":"13360","advance":"590","collection":"10579","savings":"1473"},{"name":"Rabanes","fareGas":"256","edc":"13410","advance":"795","collection":"15374","savings":"974"},{"name":"Bulic","fareGas":"206","edc":"13850","advance":"195","collection":"17921","savings":"1171"}],"releases":[{"fo":"Casanova","borrower":"Cruz, Bebeth","loan":"47000","notary":"50","fees1":"470","fees34":"1410","advance":"365"}],"expenses":[{"label":"Gas","amount":"1105"},{"label":"DLM","amount":"3329"},{"label":"Fees","amount":"1021"},{"label":"Notary","amount":"361"},{"label":"E-Fund","amount":"191"},{"label":"Company","amount":"1017"},{"label":"Employee","amount":"481"}],"denom":{"d1000":"28","d500":"24","d200":"3","d100":"80","d50":"62","d20":"6","coins":"444"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-01-seed-v3eu5t","date":"2026-08-01","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"87574","collectors":[{"name":"Casanova","fareGas":"195","edc":"22034","advance":"1054","collection":"26972","savings":"4300"},{"name":"Magno","fareGas":"251","edc":"11373","advance":"98","collection":"15399","savings":"2460"},{"name":"Josol","fareGas":"306","edc":"11789","advance":"366","collection":"10162","savings":"1184"},{"name":"Rabanes","fareGas":"189","edc":"13407","advance":"661","collection":"15304","savings":"969"},{"name":"Bulic","fareGas":"173","edc":"12924","advance":"215","collection":"15227","savings":"1169"}],"releases":[{"fo":"Rabanes","borrower":"Castillo, Mercedez","loan":"32000","notary":"50","fees1":"320","fees34":"1280","advance":"1853"},{"fo":"Magno","borrower":"Jacildo, Angelica","loan":"26000","notary":"50","fees1":"260","fees34":"780","advance":"1065"},{"fo":"Bulic","borrower":"Reyes, Jun","loan":"11000","notary":"50","fees1":"110","fees34":"330","advance":"974"}],"expenses":[{"label":"Gas","amount":"999"},{"label":"DLM","amount":"3389"},{"label":"Fees","amount":"1021"},{"label":"Notary","amount":"303"},{"label":"E-Fund","amount":"247"},{"label":"Company","amount":"1087"},{"label":"Employee","amount":"487"}],"denom":{"d1000":"29","d500":"24","d200":"3","d100":"71","d50":"82","d20":"5","coins":"526"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-03-seed-n6qdii","date":"2026-08-03","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"87141","collectors":[{"name":"Casanova","fareGas":"190","edc":"23671","advance":"1967","collection":"25180","savings":"4263"},{"name":"Magno","fareGas":"230","edc":"12658","advance":"154","collection":"17141","savings":"2203"},{"name":"Josol","fareGas":"294","edc":"11039","advance":"478","collection":"10938","savings":"1328"},{"name":"Rabanes","fareGas":"228","edc":"13953","advance":"793","collection":"15356","savings":"1087"},{"name":"Bulic","fareGas":"153","edc":"12905","advance":"172","collection":"17139","savings":"968"}],"releases":[{"fo":"Bulic","borrower":"Jacildo, Angelica","loan":"12000","notary":"50","fees1":"120","fees34":"480","advance":"2099"}],"expenses":[{"label":"Gas","amount":"931"},{"label":"DLM","amount":"3268"},{"label":"Fees","amount":"1008"},{"label":"Notary","amount":"302"},{"label":"E-Fund","amount":"215"},{"label":"Company","amount":"970"},{"label":"Employee","amount":"489"}],"denom":{"d1000":"26","d500":"25","d200":"1","d100":"115","d50":"83","d20":"4","coins":"681"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-04-seed-x6bdmr","date":"2026-08-04","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"80515","collectors":[{"name":"Casanova","fareGas":"157","edc":"24196","advance":"936","collection":"25358","savings":"4398"},{"name":"Magno","fareGas":"176","edc":"11804","advance":"157","collection":"16234","savings":"2391"},{"name":"Josol","fareGas":"308","edc":"12063","advance":"291","collection":"10277","savings":"1065"},{"name":"Rabanes","fareGas":"242","edc":"13824","advance":"409","collection":"15309","savings":"1100"},{"name":"Bulic","fareGas":"165","edc":"12982","advance":"167","collection":"17970","savings":"962"}],"releases":[{"fo":"Rabanes","borrower":"Jacildo, Angelica","loan":"39000","notary":"50","fees1":"390","fees34":"1560","advance":"1454"}],"expenses":[{"label":"Gas","amount":"1121"},{"label":"DLM","amount":"3385"},{"label":"Fees","amount":"1149"},{"label":"Notary","amount":"381"},{"label":"E-Fund","amount":"225"},{"label":"Company","amount":"1014"},{"label":"Employee","amount":"453"}],"denom":{"d1000":"25","d500":"26","d200":"1","d100":"62","d50":"94","d20":"6","coins":"504"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-05-seed-cyn86u","date":"2026-08-05","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"86821","collectors":[{"name":"Casanova","fareGas":"172","edc":"23338","advance":"1727","collection":"25064","savings":"3962"},{"name":"Magno","fareGas":"240","edc":"12984","advance":"283","collection":"14649","savings":"2769"},{"name":"Josol","fareGas":"285","edc":"11649","advance":"227","collection":"10921","savings":"1375"},{"name":"Rabanes","fareGas":"211","edc":"14040","advance":"717","collection":"15134","savings":"995"},{"name":"Bulic","fareGas":"178","edc":"12914","advance":"260","collection":"18042","savings":"1029"}],"releases":[{"fo":"Magno","borrower":"Castillo, Mercedez","loan":"23000","notary":"50","fees1":"230","fees34":"920","advance":"1531"},{"fo":"Casanova","borrower":"Castillo, Mercedez","loan":"5000","notary":"50","fees1":"50","fees34":"150","advance":"38"}],"expenses":[{"label":"Gas","amount":"1016"},{"label":"DLM","amount":"3072"},{"label":"Fees","amount":"1016"},{"label":"Notary","amount":"379"},{"label":"E-Fund","amount":"191"},{"label":"Company","amount":"1129"},{"label":"Employee","amount":"469"}],"denom":{"d1000":"28","d500":"33","d200":"1","d100":"99","d50":"63","d20":"3","coins":"538"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-06-seed-vft8r2","date":"2026-08-06","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"86123","collectors":[{"name":"Casanova","fareGas":"173","edc":"23592","advance":"970","collection":"25977","savings":"4129"},{"name":"Magno","fareGas":"205","edc":"12673","advance":"207","collection":"17361","savings":"2663"},{"name":"Josol","fareGas":"271","edc":"11297","advance":"459","collection":"10503","savings":"1024"},{"name":"Rabanes","fareGas":"256","edc":"13997","advance":"860","collection":"15276","savings":"803"},{"name":"Bulic","fareGas":"209","edc":"13309","advance":"233","collection":"18016","savings":"901"}],"releases":[{"fo":"Josol","borrower":"Castillo, Mercedez","loan":"42000","notary":"50","fees1":"420","fees34":"1260","advance":"795"},{"fo":"Rabanes","borrower":"Castillo, Mercedez","loan":"26000","notary":"50","fees1":"260","fees34":"1040","advance":"1563"}],"expenses":[{"label":"Gas","amount":"963"},{"label":"DLM","amount":"3017"},{"label":"Fees","amount":"931"},{"label":"Notary","amount":"308"},{"label":"E-Fund","amount":"227"},{"label":"Company","amount":"972"},{"label":"Employee","amount":"434"}],"denom":{"d1000":"20","d500":"23","d200":"1","d100":"114","d50":"60","d20":"4","coins":"416"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-07-seed-g481ya","date":"2026-08-07","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"87661","collectors":[{"name":"Casanova","fareGas":"162","edc":"22094","advance":"1968","collection":"26476","savings":"4248"},{"name":"Magno","fareGas":"199","edc":"13225","advance":"56","collection":"17677","savings":"2957"},{"name":"Josol","fareGas":"333","edc":"13469","advance":"506","collection":"9923","savings":"1088"},{"name":"Rabanes","fareGas":"185","edc":"13758","advance":"625","collection":"15148","savings":"980"},{"name":"Bulic","fareGas":"166","edc":"13263","advance":"210","collection":"17003","savings":"1068"}],"releases":[{"fo":"Magno","borrower":"Perez, Analyn","loan":"19000","notary":"50","fees1":"190","fees34":"570","advance":"154"},{"fo":"Casanova","borrower":"Jacildo, Angelica","loan":"36000","notary":"50","fees1":"360","fees34":"1440","advance":"2020"}],"expenses":[{"label":"Gas","amount":"910"},{"label":"DLM","amount":"2916"},{"label":"Fees","amount":"994"},{"label":"Notary","amount":"398"},{"label":"E-Fund","amount":"241"},{"label":"Company","amount":"912"},{"label":"Employee","amount":"476"}],"denom":{"d1000":"29","d500":"22","d200":"1","d100":"72","d50":"55","d20":"2","coins":"540"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-08-seed-8v8p62","date":"2026-08-08","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"79095","collectors":[{"name":"Casanova","fareGas":"216","edc":"23250","advance":"2196","collection":"26755","savings":"4227"},{"name":"Magno","fareGas":"210","edc":"13120","advance":"68","collection":"16469","savings":"2600"},{"name":"Josol","fareGas":"339","edc":"10850","advance":"429","collection":"10745","savings":"922"},{"name":"Rabanes","fareGas":"241","edc":"14101","advance":"802","collection":"15040","savings":"1057"},{"name":"Bulic","fareGas":"153","edc":"12982","advance":"214","collection":"17709","savings":"1274"}],"releases":[{"fo":"Casanova","borrower":"Jacildo, Angelica","loan":"15000","notary":"50","fees1":"150","fees34":"600","advance":"1878"}],"expenses":[{"label":"Gas","amount":"939"},{"label":"DLM","amount":"2902"},{"label":"Fees","amount":"1115"},{"label":"Notary","amount":"367"},{"label":"E-Fund","amount":"212"},{"label":"Company","amount":"1130"},{"label":"Employee","amount":"516"}],"denom":{"d1000":"22","d500":"23","d200":"1","d100":"102","d50":"43","d20":"4","coins":"441"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-10-seed-q37u5q","date":"2026-08-10","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"79076","collectors":[{"name":"Casanova","fareGas":"148","edc":"23254","advance":"1222","collection":"27169","savings":"4191"},{"name":"Magno","fareGas":"225","edc":"10775","advance":"151","collection":"17575","savings":"3058"},{"name":"Josol","fareGas":"314","edc":"11616","advance":"315","collection":"10467","savings":"1246"},{"name":"Rabanes","fareGas":"229","edc":"13767","advance":"444","collection":"15274","savings":"917"},{"name":"Bulic","fareGas":"178","edc":"13310","advance":"190","collection":"17042","savings":"963"}],"releases":[{"fo":"Bulic","borrower":"Reyes, Jun","loan":"12000","notary":"50","fees1":"120","fees34":"360","advance":"2039"},{"fo":"Magno","borrower":"Reyes, Jun","loan":"20000","notary":"50","fees1":"200","fees34":"600","advance":"2008"}],"expenses":[{"label":"Gas","amount":"930"},{"label":"DLM","amount":"3145"},{"label":"Fees","amount":"972"},{"label":"Notary","amount":"368"},{"label":"E-Fund","amount":"250"},{"label":"Company","amount":"1143"},{"label":"Employee","amount":"445"}],"denom":{"d1000":"25","d500":"33","d200":"1","d100":"86","d50":"62","d20":"2","coins":"629"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-11-seed-3g1tc3","date":"2026-08-11","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"80995","collectors":[{"name":"Casanova","fareGas":"146","edc":"21091","advance":"1314","collection":"26443","savings":"4187"},{"name":"Magno","fareGas":"190","edc":"10638","advance":"130","collection":"15710","savings":"2701"},{"name":"Josol","fareGas":"263","edc":"12049","advance":"569","collection":"10355","savings":"972"},{"name":"Rabanes","fareGas":"247","edc":"13751","advance":"839","collection":"15289","savings":"1120"},{"name":"Bulic","fareGas":"151","edc":"13894","advance":"185","collection":"18075","savings":"1073"}],"releases":[{"fo":"Casanova","borrower":"Gabacat, Gina","loan":"11000","notary":"50","fees1":"110","fees34":"330","advance":"685"},{"fo":"Casanova","borrower":"Gabacat, Gina","loan":"40000","notary":"50","fees1":"400","fees34":"1200","advance":"1537"},{"fo":"Magno","borrower":"Domingo, Rey","loan":"15000","notary":"50","fees1":"150","fees34":"600","advance":"328"}],"expenses":[{"label":"Gas","amount":"971"},{"label":"DLM","amount":"3171"},{"label":"Fees","amount":"1003"},{"label":"Notary","amount":"326"},{"label":"E-Fund","amount":"225"},{"label":"Company","amount":"1070"},{"label":"Employee","amount":"442"}],"denom":{"d1000":"18","d500":"21","d200":"2","d100":"105","d50":"67","d20":"3","coins":"474"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-12-seed-zv55x3","date":"2026-08-12","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"78416","collectors":[{"name":"Casanova","fareGas":"218","edc":"23532","advance":"1071","collection":"25683","savings":"3987"},{"name":"Magno","fareGas":"240","edc":"11920","advance":"188","collection":"17109","savings":"2739"},{"name":"Josol","fareGas":"325","edc":"10801","advance":"232","collection":"10260","savings":"1358"},{"name":"Rabanes","fareGas":"194","edc":"14014","advance":"615","collection":"15311","savings":"988"},{"name":"Bulic","fareGas":"191","edc":"13019","advance":"260","collection":"17402","savings":"929"}],"releases":[{"fo":"Rabanes","borrower":"Manalo, Fe","loan":"10000","notary":"50","fees1":"100","fees34":"300","advance":"979"},{"fo":"Rabanes","borrower":"Cruz, Bebeth","loan":"37000","notary":"50","fees1":"370","fees34":"1110","advance":"1463"}],"expenses":[{"label":"Gas","amount":"983"},{"label":"DLM","amount":"3296"},{"label":"Fees","amount":"1110"},{"label":"Notary","amount":"390"},{"label":"E-Fund","amount":"204"},{"label":"Company","amount":"1147"},{"label":"Employee","amount":"423"}],"denom":{"d1000":"30","d500":"28","d200":"3","d100":"96","d50":"39","d20":"5","coins":"474"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-13-seed-nc59oa","date":"2026-08-13","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"87739","collectors":[{"name":"Casanova","fareGas":"206","edc":"21815","advance":"1182","collection":"23741","savings":"3954"},{"name":"Magno","fareGas":"172","edc":"12594","advance":"63","collection":"15189","savings":"2502"},{"name":"Josol","fareGas":"332","edc":"11907","advance":"415","collection":"11198","savings":"1289"},{"name":"Rabanes","fareGas":"190","edc":"14129","advance":"482","collection":"15173","savings":"1106"},{"name":"Bulic","fareGas":"203","edc":"13422","advance":"222","collection":"17878","savings":"1146"}],"releases":[{"fo":"Rabanes","borrower":"Manalo, Fe","loan":"34000","notary":"50","fees1":"340","fees34":"1360","advance":"1577"},{"fo":"Josol","borrower":"Quintas, Siriano","loan":"28000","notary":"50","fees1":"280","fees34":"1120","advance":"1804"},{"fo":"Bulic","borrower":"Perez, Analyn","loan":"44000","notary":"50","fees1":"440","fees34":"1760","advance":"395"}],"expenses":[{"label":"Gas","amount":"921"},{"label":"DLM","amount":"3222"},{"label":"Fees","amount":"993"},{"label":"Notary","amount":"373"},{"label":"E-Fund","amount":"185"},{"label":"Company","amount":"1123"},{"label":"Employee","amount":"450"}],"denom":{"d1000":"19","d500":"27","d200":"1","d100":"103","d50":"38","d20":"3","coins":"570"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-14-seed-a82o7l","date":"2026-08-14","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"81846","collectors":[{"name":"Casanova","fareGas":"155","edc":"21480","advance":"1166","collection":"26025","savings":"4221"},{"name":"Magno","fareGas":"203","edc":"11483","advance":"18","collection":"14623","savings":"2496"},{"name":"Josol","fareGas":"308","edc":"13476","advance":"588","collection":"11153","savings":"1474"},{"name":"Rabanes","fareGas":"179","edc":"13590","advance":"561","collection":"14932","savings":"1072"},{"name":"Bulic","fareGas":"216","edc":"13814","advance":"232","collection":"17194","savings":"1140"}],"releases":[{"fo":"Magno","borrower":"Domingo, Rey","loan":"33000","notary":"50","fees1":"330","fees34":"990","advance":"1300"},{"fo":"Josol","borrower":"Castillo, Mercedez","loan":"15000","notary":"50","fees1":"150","fees34":"450","advance":"872"},{"fo":"Bulic","borrower":"Jacildo, Angelica","loan":"24000","notary":"50","fees1":"240","fees34":"720","advance":"287"}],"expenses":[{"label":"Gas","amount":"912"},{"label":"DLM","amount":"2979"},{"label":"Fees","amount":"1075"},{"label":"Notary","amount":"367"},{"label":"E-Fund","amount":"216"},{"label":"Company","amount":"930"},{"label":"Employee","amount":"433"}],"denom":{"d1000":"29","d500":"24","d200":"2","d100":"87","d50":"59","d20":"3","coins":"562"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-15-seed-jgkzja","date":"2026-08-15","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"81319","collectors":[{"name":"Casanova","fareGas":"175","edc":"22861","advance":"2334","collection":"25433","savings":"4038"},{"name":"Magno","fareGas":"220","edc":"11714","advance":"56","collection":"15685","savings":"2697"},{"name":"Josol","fareGas":"261","edc":"12752","advance":"252","collection":"10633","savings":"1013"},{"name":"Rabanes","fareGas":"173","edc":"13934","advance":"503","collection":"15090","savings":"1076"},{"name":"Bulic","fareGas":"218","edc":"13841","advance":"239","collection":"16323","savings":"1209"}],"releases":[{"fo":"Bulic","borrower":"Manalo, Fe","loan":"37000","notary":"50","fees1":"370","fees34":"1110","advance":"1327"},{"fo":"Magno","borrower":"Perez, Analyn","loan":"33000","notary":"50","fees1":"330","fees34":"1320","advance":"759"}],"expenses":[{"label":"Gas","amount":"1087"},{"label":"DLM","amount":"3290"},{"label":"Fees","amount":"1062"},{"label":"Notary","amount":"329"},{"label":"E-Fund","amount":"234"},{"label":"Company","amount":"949"},{"label":"Employee","amount":"486"}],"denom":{"d1000":"24","d500":"27","d200":"2","d100":"92","d50":"55","d20":"3","coins":"554"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-17-seed-7561ko","date":"2026-08-17","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"86707","collectors":[{"name":"Casanova","fareGas":"139","edc":"21789","advance":"1677","collection":"23825","savings":"4139"},{"name":"Magno","fareGas":"228","edc":"12335","advance":"1","collection":"14509","savings":"3099"},{"name":"Josol","fareGas":"267","edc":"11938","advance":"542","collection":"11168","savings":"1439"},{"name":"Rabanes","fareGas":"187","edc":"14087","advance":"827","collection":"15059","savings":"891"},{"name":"Bulic","fareGas":"207","edc":"12977","advance":"290","collection":"15683","savings":"1015"}],"releases":[{"fo":"Magno","borrower":"Castillo, Mercedez","loan":"35000","notary":"50","fees1":"350","fees34":"1400","advance":"748"}],"expenses":[{"label":"Gas","amount":"1027"},{"label":"DLM","amount":"3342"},{"label":"Fees","amount":"1022"},{"label":"Notary","amount":"356"},{"label":"E-Fund","amount":"205"},{"label":"Company","amount":"937"},{"label":"Employee","amount":"498"}],"denom":{"d1000":"19","d500":"22","d200":"1","d100":"101","d50":"58","d20":"5","coins":"617"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-18-seed-opmm2e","date":"2026-08-18","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"78706","collectors":[{"name":"Casanova","fareGas":"161","edc":"21530","advance":"1563","collection":"26967","savings":"4243"},{"name":"Magno","fareGas":"223","edc":"10997","advance":"278","collection":"14744","savings":"2264"},{"name":"Josol","fareGas":"336","edc":"13595","advance":"615","collection":"11108","savings":"958"},{"name":"Rabanes","fareGas":"254","edc":"13588","advance":"564","collection":"14974","savings":"1014"},{"name":"Bulic","fareGas":"173","edc":"13497","advance":"240","collection":"16842","savings":"1264"}],"releases":[{"fo":"Bulic","borrower":"Quintas, Siriano","loan":"27000","notary":"50","fees1":"270","fees34":"810","advance":"802"}],"expenses":[{"label":"Gas","amount":"1062"},{"label":"DLM","amount":"3377"},{"label":"Fees","amount":"1034"},{"label":"Notary","amount":"318"},{"label":"E-Fund","amount":"259"},{"label":"Company","amount":"1142"},{"label":"Employee","amount":"459"}],"denom":{"d1000":"21","d500":"27","d200":"2","d100":"68","d50":"82","d20":"4","coins":"544"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-19-seed-f1dm3u","date":"2026-08-19","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"81115","collectors":[{"name":"Casanova","fareGas":"218","edc":"23118","advance":"2036","collection":"24749","savings":"4377"},{"name":"Magno","fareGas":"171","edc":"11075","advance":"55","collection":"15152","savings":"2598"},{"name":"Josol","fareGas":"322","edc":"11279","advance":"632","collection":"9975","savings":"1469"},{"name":"Rabanes","fareGas":"224","edc":"13488","advance":"715","collection":"15032","savings":"905"},{"name":"Bulic","fareGas":"168","edc":"13586","advance":"285","collection":"16351","savings":"1108"}],"releases":[{"fo":"Magno","borrower":"Perez, Analyn","loan":"37000","notary":"50","fees1":"370","fees34":"1110","advance":"798"},{"fo":"Casanova","borrower":"Cruz, Bebeth","loan":"30000","notary":"50","fees1":"300","fees34":"1200","advance":"1696"}],"expenses":[{"label":"Gas","amount":"927"},{"label":"DLM","amount":"3106"},{"label":"Fees","amount":"912"},{"label":"Notary","amount":"314"},{"label":"E-Fund","amount":"252"},{"label":"Company","amount":"995"},{"label":"Employee","amount":"454"}],"denom":{"d1000":"21","d500":"30","d200":"1","d100":"83","d50":"81","d20":"6","coins":"493"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-20-seed-zdq5e0","date":"2026-08-20","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"79930","collectors":[{"name":"Casanova","fareGas":"218","edc":"21365","advance":"1024","collection":"24073","savings":"3949"},{"name":"Magno","fareGas":"224","edc":"11740","advance":"174","collection":"16485","savings":"2427"},{"name":"Josol","fareGas":"333","edc":"11803","advance":"159","collection":"10078","savings":"1147"},{"name":"Rabanes","fareGas":"194","edc":"13585","advance":"707","collection":"14977","savings":"1139"},{"name":"Bulic","fareGas":"184","edc":"13273","advance":"182","collection":"16225","savings":"981"}],"releases":[{"fo":"Magno","borrower":"Castillo, Mercedez","loan":"16000","notary":"50","fees1":"160","fees34":"640","advance":"1259"},{"fo":"Rabanes","borrower":"Catlabayan, Val","loan":"38000","notary":"50","fees1":"380","fees34":"1140","advance":"194"}],"expenses":[{"label":"Gas","amount":"1055"},{"label":"DLM","amount":"3099"},{"label":"Fees","amount":"1074"},{"label":"Notary","amount":"344"},{"label":"E-Fund","amount":"216"},{"label":"Company","amount":"975"},{"label":"Employee","amount":"465"}],"denom":{"d1000":"28","d500":"27","d200":"0","d100":"98","d50":"66","d20":"2","coins":"488"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-21-seed-uw0w4v","date":"2026-08-21","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"82849","collectors":[{"name":"Casanova","fareGas":"201","edc":"22592","advance":"1864","collection":"26976","savings":"4325"},{"name":"Magno","fareGas":"200","edc":"13117","advance":"189","collection":"15361","savings":"2430"},{"name":"Josol","fareGas":"322","edc":"11497","advance":"412","collection":"10234","savings":"1130"},{"name":"Rabanes","fareGas":"214","edc":"13760","advance":"604","collection":"15063","savings":"1141"},{"name":"Bulic","fareGas":"169","edc":"13470","advance":"213","collection":"16917","savings":"1021"}],"releases":[{"fo":"Magno","borrower":"Jacildo, Angelica","loan":"40000","notary":"50","fees1":"400","fees34":"1200","advance":"1967"},{"fo":"Bulic","borrower":"Catlabayan, Val","loan":"28000","notary":"50","fees1":"280","fees34":"840","advance":"533"}],"expenses":[{"label":"Gas","amount":"1106"},{"label":"DLM","amount":"2995"},{"label":"Fees","amount":"1021"},{"label":"Notary","amount":"386"},{"label":"E-Fund","amount":"206"},{"label":"Company","amount":"1074"},{"label":"Employee","amount":"427"}],"denom":{"d1000":"21","d500":"25","d200":"0","d100":"83","d50":"54","d20":"5","coins":"457"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-22-seed-k7e737","date":"2026-08-22","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"78196","collectors":[{"name":"Casanova","fareGas":"130","edc":"23235","advance":"1875","collection":"23960","savings":"3998"},{"name":"Magno","fareGas":"233","edc":"11848","advance":"258","collection":"14657","savings":"2871"},{"name":"Josol","fareGas":"304","edc":"10934","advance":"221","collection":"11123","savings":"971"},{"name":"Rabanes","fareGas":"241","edc":"14153","advance":"698","collection":"14992","savings":"889"},{"name":"Bulic","fareGas":"196","edc":"13358","advance":"188","collection":"15159","savings":"1099"}],"releases":[{"fo":"Rabanes","borrower":"Cruz, Bebeth","loan":"47000","notary":"50","fees1":"470","fees34":"1410","advance":"2054"}],"expenses":[{"label":"Gas","amount":"980"},{"label":"DLM","amount":"3139"},{"label":"Fees","amount":"1066"},{"label":"Notary","amount":"315"},{"label":"E-Fund","amount":"223"},{"label":"Company","amount":"978"},{"label":"Employee","amount":"514"}],"denom":{"d1000":"26","d500":"26","d200":"0","d100":"113","d50":"41","d20":"6","coins":"501"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-24-seed-q9xtuk","date":"2026-08-24","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"83608","collectors":[{"name":"Casanova","fareGas":"200","edc":"22458","advance":"1537","collection":"24138","savings":"3969"},{"name":"Magno","fareGas":"213","edc":"11434","advance":"168","collection":"16915","savings":"3124"},{"name":"Josol","fareGas":"287","edc":"12181","advance":"607","collection":"10229","savings":"1129"},{"name":"Rabanes","fareGas":"212","edc":"13682","advance":"652","collection":"15001","savings":"1116"},{"name":"Bulic","fareGas":"163","edc":"13735","advance":"220","collection":"16485","savings":"957"}],"releases":[{"fo":"Rabanes","borrower":"Cruz, Bebeth","loan":"45000","notary":"50","fees1":"450","fees34":"1350","advance":"1413"},{"fo":"Josol","borrower":"Catlabayan, Val","loan":"44000","notary":"50","fees1":"440","fees34":"1760","advance":"2042"}],"expenses":[{"label":"Gas","amount":"1146"},{"label":"DLM","amount":"2927"},{"label":"Fees","amount":"1039"},{"label":"Notary","amount":"377"},{"label":"E-Fund","amount":"239"},{"label":"Company","amount":"1047"},{"label":"Employee","amount":"489"}],"denom":{"d1000":"25","d500":"23","d200":"2","d100":"97","d50":"45","d20":"2","coins":"413"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-25-seed-qrskko","date":"2026-08-25","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"85756","collectors":[{"name":"Casanova","fareGas":"179","edc":"23415","advance":"994","collection":"25627","savings":"4375"},{"name":"Magno","fareGas":"197","edc":"11877","advance":"240","collection":"17018","savings":"2378"},{"name":"Josol","fareGas":"325","edc":"10936","advance":"354","collection":"11204","savings":"1448"},{"name":"Rabanes","fareGas":"210","edc":"14064","advance":"767","collection":"15247","savings":"905"},{"name":"Bulic","fareGas":"214","edc":"13437","advance":"141","collection":"16473","savings":"1168"}],"releases":[{"fo":"Josol","borrower":"Quintas, Siriano","loan":"10000","notary":"50","fees1":"100","fees34":"300","advance":"1688"},{"fo":"Rabanes","borrower":"Castillo, Mercedez","loan":"12000","notary":"50","fees1":"120","fees34":"360","advance":"2123"}],"expenses":[{"label":"Gas","amount":"1035"},{"label":"DLM","amount":"3088"},{"label":"Fees","amount":"958"},{"label":"Notary","amount":"301"},{"label":"E-Fund","amount":"201"},{"label":"Company","amount":"1090"},{"label":"Employee","amount":"481"}],"denom":{"d1000":"23","d500":"21","d200":"1","d100":"90","d50":"64","d20":"4","coins":"460"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-26-seed-e35lij","date":"2026-08-26","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"80180","collectors":[{"name":"Casanova","fareGas":"160","edc":"23566","advance":"904","collection":"27140","savings":"4066"},{"name":"Magno","fareGas":"191","edc":"13382","advance":"100","collection":"17064","savings":"2902"},{"name":"Josol","fareGas":"289","edc":"12831","advance":"368","collection":"10344","savings":"1366"},{"name":"Rabanes","fareGas":"208","edc":"14082","advance":"491","collection":"15164","savings":"828"},{"name":"Bulic","fareGas":"177","edc":"13846","advance":"107","collection":"17536","savings":"950"}],"releases":[{"fo":"Magno","borrower":"Manalo, Fe","loan":"6000","notary":"50","fees1":"60","fees34":"180","advance":"1419"},{"fo":"Bulic","borrower":"Quintas, Siriano","loan":"7000","notary":"50","fees1":"70","fees34":"280","advance":"1976"},{"fo":"Casanova","borrower":"Catlabayan, Val","loan":"42000","notary":"50","fees1":"420","fees34":"1680","advance":"1169"}],"expenses":[{"label":"Gas","amount":"1144"},{"label":"DLM","amount":"3103"},{"label":"Fees","amount":"946"},{"label":"Notary","amount":"326"},{"label":"E-Fund","amount":"225"},{"label":"Company","amount":"1019"},{"label":"Employee","amount":"503"}],"denom":{"d1000":"29","d500":"27","d200":"2","d100":"92","d50":"49","d20":"5","coins":"452"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-27-seed-fqtvhf","date":"2026-08-27","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"87389","collectors":[{"name":"Casanova","fareGas":"131","edc":"22337","advance":"1301","collection":"25187","savings":"4208"},{"name":"Magno","fareGas":"239","edc":"12037","advance":"269","collection":"14702","savings":"2472"},{"name":"Josol","fareGas":"332","edc":"11013","advance":"433","collection":"11131","savings":"1271"},{"name":"Rabanes","fareGas":"191","edc":"13964","advance":"572","collection":"15208","savings":"811"},{"name":"Bulic","fareGas":"185","edc":"13590","advance":"131","collection":"17516","savings":"1225"}],"releases":[{"fo":"Josol","borrower":"Catlabayan, Val","loan":"38000","notary":"50","fees1":"380","fees34":"1140","advance":"1484"},{"fo":"Rabanes","borrower":"Reyes, Jun","loan":"21000","notary":"50","fees1":"210","fees34":"630","advance":"1241"}],"expenses":[{"label":"Gas","amount":"968"},{"label":"DLM","amount":"3034"},{"label":"Fees","amount":"954"},{"label":"Notary","amount":"313"},{"label":"E-Fund","amount":"232"},{"label":"Company","amount":"1132"},{"label":"Employee","amount":"451"}],"denom":{"d1000":"20","d500":"22","d200":"2","d100":"86","d50":"64","d20":"3","coins":"686"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-28-seed-h8slz6","date":"2026-08-28","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"79122","collectors":[{"name":"Casanova","fareGas":"190","edc":"22090","advance":"972","collection":"25223","savings":"4078"},{"name":"Magno","fareGas":"210","edc":"10831","advance":"221","collection":"17461","savings":"2890"},{"name":"Josol","fareGas":"301","edc":"11962","advance":"535","collection":"11147","savings":"1436"},{"name":"Rabanes","fareGas":"200","edc":"14138","advance":"743","collection":"14992","savings":"902"},{"name":"Bulic","fareGas":"171","edc":"12979","advance":"264","collection":"16718","savings":"1057"}],"releases":[{"fo":"Magno","borrower":"Quintas, Siriano","loan":"42000","notary":"50","fees1":"420","fees34":"1680","advance":"38"},{"fo":"Josol","borrower":"Castillo, Mercedez","loan":"39000","notary":"50","fees1":"390","fees34":"1170","advance":"718"},{"fo":"Rabanes","borrower":"Gabacat, Gina","loan":"13000","notary":"50","fees1":"130","fees34":"390","advance":"2005"}],"expenses":[{"label":"Gas","amount":"1120"},{"label":"DLM","amount":"3192"},{"label":"Fees","amount":"1021"},{"label":"Notary","amount":"362"},{"label":"E-Fund","amount":"185"},{"label":"Company","amount":"1065"},{"label":"Employee","amount":"513"}],"denom":{"d1000":"27","d500":"20","d200":"1","d100":"108","d50":"52","d20":"4","coins":"601"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-29-seed-o9bv5y","date":"2026-08-29","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"81706","collectors":[{"name":"Casanova","fareGas":"209","edc":"21904","advance":"1392","collection":"24581","savings":"4171"},{"name":"Magno","fareGas":"242","edc":"11685","advance":"98","collection":"16311","savings":"2438"},{"name":"Josol","fareGas":"335","edc":"12102","advance":"608","collection":"11115","savings":"1189"},{"name":"Rabanes","fareGas":"257","edc":"13662","advance":"702","collection":"15160","savings":"1003"},{"name":"Bulic","fareGas":"203","edc":"13699","advance":"151","collection":"16225","savings":"1081"}],"releases":[{"fo":"Josol","borrower":"Castillo, Mercedez","loan":"20000","notary":"50","fees1":"200","fees34":"600","advance":"1190"}],"expenses":[{"label":"Gas","amount":"1011"},{"label":"DLM","amount":"3341"},{"label":"Fees","amount":"962"},{"label":"Notary","amount":"392"},{"label":"E-Fund","amount":"215"},{"label":"Company","amount":"961"},{"label":"Employee","amount":"516"}],"denom":{"d1000":"21","d500":"22","d200":"2","d100":"77","d50":"52","d20":"4","coins":"460"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-08-31-seed-a3bunt","date":"2026-08-31","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"84521","collectors":[{"name":"Casanova","fareGas":"133","edc":"21490","advance":"1255","collection":"23565","savings":"4307"},{"name":"Magno","fareGas":"241","edc":"11083","advance":"113","collection":"16948","savings":"2892"},{"name":"Josol","fareGas":"286","edc":"12342","advance":"450","collection":"11207","savings":"1420"},{"name":"Rabanes","fareGas":"188","edc":"13741","advance":"590","collection":"15433","savings":"825"},{"name":"Bulic","fareGas":"152","edc":"13702","advance":"295","collection":"18021","savings":"981"}],"releases":[{"fo":"Rabanes","borrower":"Jacildo, Angelica","loan":"38000","notary":"50","fees1":"380","fees34":"1520","advance":"69"},{"fo":"Magno","borrower":"Manalo, Fe","loan":"46000","notary":"50","fees1":"460","fees34":"1380","advance":"579"},{"fo":"Casanova","borrower":"Jacildo, Angelica","loan":"36000","notary":"50","fees1":"360","fees34":"1440","advance":"1977"}],"expenses":[{"label":"Gas","amount":"1041"},{"label":"DLM","amount":"2987"},{"label":"Fees","amount":"906"},{"label":"Notary","amount":"389"},{"label":"E-Fund","amount":"193"},{"label":"Company","amount":"934"},{"label":"Employee","amount":"421"}],"denom":{"d1000":"30","d500":"33","d200":"2","d100":"88","d50":"54","d20":"3","coins":"651"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-09-01-seed-956n2k","date":"2026-09-01","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"82041","collectors":[{"name":"Casanova","fareGas":"193","edc":"21608","advance":"1636","collection":"24955","savings":"3923"},{"name":"Magno","fareGas":"220","edc":"13288","advance":"156","collection":"17371","savings":"2465"},{"name":"Josol","fareGas":"317","edc":"11604","advance":"235","collection":"10171","savings":"1095"},{"name":"Rabanes","fareGas":"173","edc":"13484","advance":"740","collection":"15212","savings":"1137"},{"name":"Bulic","fareGas":"168","edc":"13521","advance":"263","collection":"17702","savings":"1083"}],"releases":[{"fo":"Bulic","borrower":"Perez, Analyn","loan":"28000","notary":"50","fees1":"280","fees34":"840","advance":"373"},{"fo":"Magno","borrower":"Catlabayan, Val","loan":"27000","notary":"50","fees1":"270","fees34":"810","advance":"919"}],"expenses":[{"label":"Gas","amount":"1098"},{"label":"DLM","amount":"2975"},{"label":"Fees","amount":"1079"},{"label":"Notary","amount":"368"},{"label":"E-Fund","amount":"258"},{"label":"Company","amount":"1026"},{"label":"Employee","amount":"515"}],"denom":{"d1000":"20","d500":"26","d200":"3","d100":"64","d50":"39","d20":"3","coins":"534"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-09-02-seed-qq4jr1","date":"2026-09-02","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"80775","collectors":[{"name":"Casanova","fareGas":"146","edc":"24047","advance":"1400","collection":"24103","savings":"4175"},{"name":"Magno","fareGas":"202","edc":"12193","advance":"249","collection":"17512","savings":"2969"},{"name":"Josol","fareGas":"292","edc":"12946","advance":"586","collection":"11261","savings":"1052"},{"name":"Rabanes","fareGas":"220","edc":"13586","advance":"680","collection":"15369","savings":"1040"},{"name":"Bulic","fareGas":"151","edc":"12997","advance":"168","collection":"16544","savings":"1266"}],"releases":[{"fo":"Josol","borrower":"Domingo, Rey","loan":"35000","notary":"50","fees1":"350","fees34":"1400","advance":"1258"}],"expenses":[{"label":"Gas","amount":"1074"},{"label":"DLM","amount":"2904"},{"label":"Fees","amount":"1041"},{"label":"Notary","amount":"375"},{"label":"E-Fund","amount":"217"},{"label":"Company","amount":"1129"},{"label":"Employee","amount":"438"}],"denom":{"d1000":"22","d500":"32","d200":"3","d100":"102","d50":"56","d20":"6","coins":"589"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-09-03-seed-9agzrw","date":"2026-09-03","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"81407","collectors":[{"name":"Casanova","fareGas":"182","edc":"21437","advance":"2153","collection":"24928","savings":"4246"},{"name":"Magno","fareGas":"216","edc":"12940","advance":"55","collection":"17397","savings":"2871"},{"name":"Josol","fareGas":"311","edc":"11485","advance":"284","collection":"10881","savings":"1455"},{"name":"Rabanes","fareGas":"185","edc":"14046","advance":"493","collection":"15442","savings":"993"},{"name":"Bulic","fareGas":"199","edc":"13565","advance":"139","collection":"15933","savings":"1034"}],"releases":[{"fo":"Casanova","borrower":"Cruz, Bebeth","loan":"16000","notary":"50","fees1":"160","fees34":"640","advance":"1002"},{"fo":"Rabanes","borrower":"Manalo, Fe","loan":"33000","notary":"50","fees1":"330","fees34":"1320","advance":"1909"},{"fo":"Rabanes","borrower":"Quintas, Siriano","loan":"25000","notary":"50","fees1":"250","fees34":"1000","advance":"1938"}],"expenses":[{"label":"Gas","amount":"1023"},{"label":"DLM","amount":"3355"},{"label":"Fees","amount":"1085"},{"label":"Notary","amount":"303"},{"label":"E-Fund","amount":"221"},{"label":"Company","amount":"1010"},{"label":"Employee","amount":"459"}],"denom":{"d1000":"22","d500":"26","d200":"1","d100":"88","d50":"65","d20":"4","coins":"572"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-09-04-seed-pgiksb","date":"2026-09-04","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"78520","collectors":[{"name":"Casanova","fareGas":"198","edc":"23354","advance":"2322","collection":"24392","savings":"4041"},{"name":"Magno","fareGas":"188","edc":"12234","advance":"229","collection":"17273","savings":"2234"},{"name":"Josol","fareGas":"290","edc":"11345","advance":"321","collection":"11131","savings":"1218"},{"name":"Rabanes","fareGas":"213","edc":"13534","advance":"742","collection":"15352","savings":"876"},{"name":"Bulic","fareGas":"177","edc":"13435","advance":"243","collection":"16005","savings":"1112"}],"releases":[{"fo":"Rabanes","borrower":"Gabacat, Gina","loan":"11000","notary":"50","fees1":"110","fees34":"440","advance":"985"},{"fo":"Casanova","borrower":"Cruz, Bebeth","loan":"30000","notary":"50","fees1":"300","fees34":"1200","advance":"1750"}],"expenses":[{"label":"Gas","amount":"1142"},{"label":"DLM","amount":"3202"},{"label":"Fees","amount":"1147"},{"label":"Notary","amount":"310"},{"label":"E-Fund","amount":"226"},{"label":"Company","amount":"911"},{"label":"Employee","amount":"466"}],"denom":{"d1000":"23","d500":"29","d200":"1","d100":"83","d50":"53","d20":"3","coins":"668"},"images":[],"files":[],"notes":"","seeded":true},{"id":"2026-09-05-seed-p0el1h","date":"2026-09-05","branch":"Antipolo","preparedBy":"Veronica Engada","beginningCash":"83603","collectors":[{"name":"Casanova","fareGas":"214","edc":"23133","advance":"1641","collection":"26895","savings":"4032"},{"name":"Magno","fareGas":"230","edc":"13415","advance":"18","collection":"17533","savings":"2700"},{"name":"Josol","fareGas":"325","edc":"11861","advance":"306","collection":"10058","savings":"1174"},{"name":"Rabanes","fareGas":"196","edc":"13765","advance":"508","collection":"15216","savings":"1040"},{"name":"Bulic","fareGas":"171","edc":"13437","advance":"171","collection":"15974","savings":"931"}],"releases":[{"fo":"Casanova","borrower":"Quintas, Siriano","loan":"43000","notary":"50","fees1":"430","fees34":"1720","advance":"1970"},{"fo":"Casanova","borrower":"Manalo, Fe","loan":"30000","notary":"50","fees1":"300","fees34":"900","advance":"1382"}],"expenses":[{"label":"Gas","amount":"979"},{"label":"DLM","amount":"3004"},{"label":"Fees","amount":"1008"},{"label":"Notary","amount":"318"},{"label":"E-Fund","amount":"236"},{"label":"Company","amount":"1116"},{"label":"Employee","amount":"475"}],"denom":{"d1000":"30","d500":"35","d200":"2","d100":"85","d50":"78","d20":"5","coins":"530"},"images":[],"files":[],"notes":"","seeded":true}];
+var todayISO = new Date().toISOString().slice(0,10);
+
+/* ============================== HELPERS ============================== */
+function num(v){ var n = parseFloat(String(v).replace(/,/g,'')); return isNaN(n)?0:n; }
+function fmt(n){ return n.toLocaleString(undefined,{minimumFractionDigits:0, maximumFractionDigits:2}); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+function fmtDate(iso){ if(!iso) return '—'; var d=new Date(iso+'T00:00:00'); return d.toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'}); }
+function fmtWhen(ts){ var d=new Date(ts); return d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function mondayOf(iso){
+  var d = new Date(iso+'T00:00:00');
+  var day = d.getDay();
+  var diff = (day===0? -6 : 1-day);
+  d.setDate(d.getDate()+diff);
+  return d.toISOString().slice(0,10);
+}
+function rand(min,max){ return Math.round(min + Math.random()*(max-min)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+/* ============================== DATA SHAPE ============================== */
+function blankCollector(name){ return {name:name||'', fareGas:'', edc:'', advance:'', collection:'', savings:''}; }
+function blankRelease(){ return {fo:'', borrower:'', loan:'', notary:'', fees1:'', fees34:'', advance:''}; }
+function blankReport(branch){
+  return {
+    id: null, date: todayISO, branch: branch || '', preparedBy:'', beginningCash:'',
+    collectors:[blankCollector('Casanova'),blankCollector('Magno'),blankCollector('Josol'),blankCollector('Rabanes'),blankCollector('Bulic')],
+    releases:[blankRelease()],
+    expenses:[{label:'Gas',amount:''},{label:'DLM',amount:''},{label:'Fees',amount:''},{label:'Notary',amount:''},{label:'E-Fund',amount:''},{label:'Company',amount:''},{label:'Employee',amount:''}],
+    denom:{d1000:'',d500:'',d200:'',d100:'',d50:'',d20:'',coins:''},
+    images:[], files:[], notes:'',
+    _review:{header:false,collectors:false,releases:false,expenses:false,denom:false}
+  };
+}
+
+var state = {
+  currentUser: null,
+  branches: ['Antipolo'],
+  tab:'new',
+  draft: blankReport('Antipolo'),
+  editingId: null,
+  reports: [],
+  logs: [],
+  openHistoryId: null,
+  weekStart: mondayOf(todayISO),
+  branchFilter: '__all__',
+  loginForm: { name:'', role:'cashier', branch:'Antipolo' },
+  trendRange: 30,
+  trendMetric: 'collection',
+  trendView: 'total',
+  historyDateFilter: null,
+  usingFallbackData: false
+};
+
+/* ============================== STORAGE ============================== */
+function hasStorage(){ return typeof window.storage !== 'undefined' && window.storage; }
+
+async function loadBranches(){
+  if(!hasStorage()) return;
+  try{
+    var r = await window.storage.get('branches', true);
+    if(r && r.value){ state.branches = JSON.parse(r.value); }
+  }catch(e){
+    try{ await window.storage.set('branches', JSON.stringify(state.branches), true); }catch(e2){}
+  }
+}
+async function addBranch(name){
+  name = (name||'').trim();
+  if(!name || state.branches.indexOf(name)!==-1) return;
+  state.branches.push(name);
+  if(hasStorage()){ try{ await window.storage.set('branches', JSON.stringify(state.branches), true); }catch(e){} }
+  await logAction('branch_added', 'Added branch "'+name+'"');
+}
+
+async function loadReports(){
+  if(!hasStorage()){
+    // Running as a local file with no storage API — use the embedded sample dataset instead.
+    state.reports = (typeof EMBEDDED_DEMO_REPORTS !== 'undefined') ? JSON.parse(JSON.stringify(EMBEDDED_DEMO_REPORTS)) : [];
+    state.reports.sort(function(a,b){ return (b.date||'').localeCompare(a.date||'') || (b.id||'').localeCompare(a.id||''); });
+    return;
+  }
+  try{
+    var list = await window.storage.list('reports:', true);
+    var keys = (list && list.keys) || [];
+    var items = [];
+    for(var i=0;i<keys.length;i++){
+      try{ var r = await window.storage.get(keys[i], true); if(r && r.value) items.push(JSON.parse(r.value)); }catch(e){}
+    }
+    items.sort(function(a,b){ return (b.date||'').localeCompare(a.date||'') || (b.id||'').localeCompare(a.id||''); });
+    state.reports = items;
+  }catch(e){ state.reports = []; }
+}
+
+async function saveReport(report, isEdit){
+  if(!report.id){ report.id = report.date + '-' + Math.random().toString(36).slice(2,8); }
+  var clean = JSON.parse(JSON.stringify(report));
+  delete clean._review;
+  if(!hasStorage()){ alert("You're viewing this as a local file, so it's showing sample data only — new entries can't be saved from here. Open the app through Claude to save real reports."); return false; }
+  try{
+    var res = await window.storage.set('reports:'+report.id, JSON.stringify(clean), true);
+    if(!res) throw new Error('empty result');
+    await logAction(isEdit? 'report_updated':'report_saved', (isEdit?'Updated':'Saved')+' report for '+(report.branch||'—')+' · '+report.date, report.branch);
+    return true;
+  }catch(e){
+    await logAction('error', 'Failed to save report for '+(report.branch||'—')+' · '+report.date, report.branch);
+    alert('Could not save this report. Please try again.');
+    return false;
+  }
+}
+
+async function deleteReport(id){
+  var r = null;
+  for(var i=0;i<state.reports.length;i++){ if(state.reports[i].id===id){ r = state.reports[i]; break; } }
+  try{
+    if(hasStorage()) await window.storage.delete('reports:'+id, true);
+    state.reports = state.reports.filter(function(x){ return x.id!==id; });
+    await logAction('report_deleted', 'Deleted report for '+(r? r.branch:'—')+' · '+(r? r.date:''), r? r.branch:null);
+    render();
+  }catch(e){
+    await logAction('error', 'Failed to delete report '+id);
+    alert('Could not delete this report.');
+  }
+}
+
+async function logAction(action, detail, branch){
+  var entry = {
+    ts: Date.now(),
+    user: state.currentUser? state.currentUser.name : 'unknown',
+    role: state.currentUser? state.currentUser.role : '—',
+    branch: branch || (state.currentUser? state.currentUser.branch : '—'),
+    action: action, detail: detail
+  };
+  state.logs.unshift(entry);
+  if(hasStorage()){ try{ await window.storage.set('log:'+entry.ts+'-'+Math.random().toString(36).slice(2,6), JSON.stringify(entry), true); }catch(e){} }
+}
+async function loadLogs(){
+  if(!hasStorage()){ return; }
+  try{
+    var list = await window.storage.list('log:', true);
+    var keys = ((list && list.keys) || []).slice(-500);
+    var items = [];
+    for(var i=0;i<keys.length;i++){
+      try{ var r = await window.storage.get(keys[i], true); if(r && r.value) items.push(JSON.parse(r.value)); }catch(e){}
+    }
+    items.sort(function(a,b){ return b.ts-a.ts; });
+    state.logs = items;
+  }catch(e){}
+}
+
+async function loadProfile(){
+  // Per-browser preference (which name/role/branch you last used) — stored locally,
+  // not shared with the team database. localStorage is safe here since this runs as a
+  // real hosted page, not inside the Claude artifact sandbox.
+  try{
+    var raw = window.localStorage && window.localStorage.getItem('cashier-my-profile');
+    if(raw){
+      var p = JSON.parse(raw);
+      state.loginForm.name = p.name||''; state.loginForm.role = p.role||'cashier'; state.loginForm.branch = p.branch||state.branches[0];
+    }
+  }catch(e){}
+}
+async function saveProfile(p){ try{ if(window.localStorage) window.localStorage.setItem('cashier-my-profile', JSON.stringify(p)); }catch(e){} }
+
+/* ============================== FILE HANDLING ============================== */
+function resizeImage(file){
+  return new Promise(function(resolve,reject){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var img = new Image();
+      img.onload = function(){
+        var maxW = 900;
+        var scale = Math.min(1, maxW/img.width);
+        var w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function readTextFile(file){
+  return new Promise(function(resolve,reject){
+    var reader = new FileReader();
+    reader.onload = function(ev){ resolve(String(ev.target.result).slice(0,20000)); };
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+/* ============================== AI EXTRACTION ============================== */
+var EXTRACT_SYSTEM = "You read daily cashier ledger sheets for a small lending business \u2014 submitted either as a photo of a handwritten/printed sheet, or as raw CSV data \u2014 and convert them into strict JSON. Return ONLY a JSON object, no markdown fences, no prose. Use this schema: {\"date\":\"YYYY-MM-DD or null\",\"preparedBy\":\"string or null\",\"branch\":\"string or null\",\"beginningCash\":number or null,\"collectors\":[{\"name\":\"string\",\"fareGas\":number,\"edc\":number,\"advance\":number,\"collection\":number,\"savings\":number}],\"releases\":[{\"fo\":\"string\",\"borrower\":\"string\",\"loan\":number,\"notary\":number,\"fees1\":number,\"fees34\":number,\"advance\":number}],\"expenses\":[{\"label\":\"string\",\"amount\":number}],\"denom\":{\"d1000\":number,\"d500\":number,\"d200\":number,\"d100\":number,\"d50\":number,\"d20\":number,\"coins\":number}}. Numbers only, no currency symbols or commas. Use 0 for missing numbers, null for missing text.";
+
+async function callClaude(content){
+  var response = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, system: EXTRACT_SYSTEM, messages:[{role:"user", content: content}] })
+  });
+  var data = await response.json();
+  var blocks = (data.content||[]).filter(function(b){ return b.type==='text'; }).map(function(b){ return b.text; }).join('\n');
+  var cleaned = blocks.replace(/```json|```/g,'').trim();
+  return JSON.parse(cleaned);
+}
+async function extractReportFromImage(dataUrl){
+  var match = /^data:(image\/[a-zA-Z]+);base64,(.*)$/.exec(dataUrl);
+  if(!match) throw new Error('bad image data');
+  return callClaude([
+    {type:"image", source:{type:"base64", media_type:match[1], data:match[2]}},
+    {type:"text", text:"Extract this cashier ledger sheet photo into the JSON schema."}
+  ]);
+}
+async function extractReportFromCSV(csvText){
+  return callClaude([{type:"text", text:"Here is CSV data exported from a daily cashier ledger:\n\n"+csvText+"\n\nExtract it into the JSON schema."}]);
+}
+
+function mergeExtracted(draft, ex){
+  var touched = {header:false,collectors:false,releases:false,expenses:false,denom:false};
+  if(ex.date){ draft.date = ex.date; touched.header=true; }
+  if(ex.preparedBy){ draft.preparedBy = ex.preparedBy; touched.header=true; }
+  if(ex.branch){ draft.branch = ex.branch; touched.header=true; }
+  if(ex.beginningCash!=null){ draft.beginningCash = String(ex.beginningCash); touched.header=true; }
+  if(Array.isArray(ex.collectors) && ex.collectors.length){
+    draft.collectors = ex.collectors.map(function(c){ return { name:c.name||'', fareGas:String(c.fareGas==null?'':c.fareGas), edc:String(c.edc==null?'':c.edc), advance:String(c.advance==null?'':c.advance), collection:String(c.collection==null?'':c.collection), savings:String(c.savings==null?'':c.savings) }; });
+    touched.collectors=true;
+  }
+  if(Array.isArray(ex.releases) && ex.releases.length){
+    draft.releases = ex.releases.map(function(x){ return { fo:x.fo||'', borrower:x.borrower||'', loan:String(x.loan==null?'':x.loan), notary:String(x.notary==null?'':x.notary), fees1:String(x.fees1==null?'':x.fees1), fees34:String(x.fees34==null?'':x.fees34), advance:String(x.advance==null?'':x.advance) }; });
+    touched.releases=true;
+  }
+  if(Array.isArray(ex.expenses) && ex.expenses.length){
+    draft.expenses = ex.expenses.map(function(x){ return { label:x.label||'', amount:String(x.amount==null?'':x.amount) }; });
+    touched.expenses=true;
+  }
+  if(ex.denom){
+    ['d1000','d500','d200','d100','d50','d20','coins'].forEach(function(k){
+      if(ex.denom[k]!=null && ex.denom[k]!==0){ draft.denom[k] = String(ex.denom[k]); touched.denom=true; }
+    });
+  }
+  if(!draft._review) draft._review = {header:false,collectors:false,releases:false,expenses:false,denom:false};
+  Object.keys(touched).forEach(function(k){ if(touched[k]) draft._review[k]=true; });
+}
+
+/* ============================== DEMO DATA ============================== */
+var SAMPLE_COLLECTOR_RANGES = {
+  Casanova: {collection:[23500,27200], savings:[3900,4400], edc:[21000,24500], advance:[900,2400], fareGas:[130,220]},
+  Magno:    {collection:[14500,17800], savings:[2200,3200], edc:[10500,13500], advance:[0,300],   fareGas:[170,260]},
+  Josol:    {collection:[9900,11300],  savings:[900,1500],  edc:[10800,13600], advance:[150,700],  fareGas:[260,340]},
+  Rabanes:  {collection:[14900,15450], savings:[800,1150],  edc:[13400,14200], advance:[400,900],  fareGas:[170,260]},
+  Bulic:    {collection:[14900,18100], savings:[900,1300],  edc:[12900,13900], advance:[100,300],  fareGas:[150,220]}
+};
+var SAMPLE_BORROWERS = ['Catlabayan, Val','Perez, Analyn','Quintas, Siriano','Gabacat, Gina','Jacildo, Angelica','Cruz, Bebeth','Castillo, Mercedez','Domingo, Rey','Manalo, Fe','Reyes, Jun'];
+
+function generateSampleReport(dateStr, branch){
+  var names = Object.keys(SAMPLE_COLLECTOR_RANGES);
+  var collectors = names.map(function(name){
+    var rg = SAMPLE_COLLECTOR_RANGES[name];
+    return { name:name, fareGas:String(rand(rg.fareGas[0],rg.fareGas[1])), edc:String(rand(rg.edc[0],rg.edc[1])), advance:String(rand(rg.advance[0],rg.advance[1])), collection:String(rand(rg.collection[0],rg.collection[1])), savings:String(rand(rg.savings[0],rg.savings[1])) };
+  });
+  var numReleases = rand(1,3);
+  var releases = [];
+  for(var i=0;i<numReleases;i++){
+    var loan = rand(5,47)*1000;
+    var fees1 = Math.round(loan*0.01);
+    var fees34 = Math.round(loan*(rand(3,4)/100));
+    releases.push({ fo:pick(names), borrower:pick(SAMPLE_BORROWERS), loan:String(loan), notary:'50', fees1:String(fees1), fees34:String(fees34), advance:String(rand(0,2200)) });
+  }
+  var expenses = [
+    {label:'Gas', amount:String(rand(900,1150))},{label:'DLM', amount:String(rand(2900,3400))},
+    {label:'Fees', amount:String(rand(900,1150))},{label:'Notary', amount:String(rand(300,400))},
+    {label:'E-Fund', amount:String(rand(180,260))},{label:'Company', amount:String(rand(900,1150))},
+    {label:'Employee', amount:String(rand(420,520))}
+  ];
+  var denom = { d1000:String(rand(18,30)), d500:String(rand(20,36)), d200:String(rand(0,3)), d100:String(rand(60,115)), d50:String(rand(30,95)), d20:String(rand(2,6)), coins:String(rand(400,700)) };
+  return {
+    id:null, date:dateStr, branch:branch, preparedBy:'Veronica Engada', beginningCash:String(rand(78000,88000)),
+    collectors:collectors, releases:releases, expenses:expenses, denom:denom, images:[], files:[], notes:'', seeded:true,
+    _review:{header:false,collectors:false,releases:false,expenses:false,denom:false}
+  };
+}
+
+async function seedSampleData(days, branch, onProgress){
+  if(!hasStorage()){ alert('Storage is not available in this environment.'); return 0; }
+  if(state.branches.indexOf(branch)===-1) await addBranch(branch);
+  var existingDates = {};
+  state.reports.forEach(function(r){ if(r.branch===branch) existingDates[r.date]=true; });
+  var today = new Date();
+  var done = 0, created = 0;
+  for(var i=days-1;i>=0;i--){
+    var d = new Date(today); d.setDate(d.getDate()-i);
+    if(d.getDay()===0) continue;
+    var dateStr = d.toISOString().slice(0,10);
+    done++;
+    if(onProgress) onProgress(done, days);
+    if(existingDates[dateStr]) continue;
+    var report = generateSampleReport(dateStr, branch);
+    var clean = JSON.parse(JSON.stringify(report));
+    delete clean._review;
+    clean.id = dateStr + '-seed-' + Math.random().toString(36).slice(2,8);
+    try{ await window.storage.set('reports:'+clean.id, JSON.stringify(clean), true); created++; }catch(e){}
+  }
+  await logAction('seed_demo_data', 'Seeded '+created+' new business-day reports for '+branch, branch);
+  return created;
+}
+
+/* ============================== COMPUTATIONS ============================== */
+function computeTotals(r){
+  var collTotal=0, savingsTotal=0, edcTotal=0, advTotal=0, fareTotal=0;
+  r.collectors.forEach(function(c){ collTotal+=num(c.collection); savingsTotal+=num(c.savings); edcTotal+=num(c.edc); advTotal+=num(c.advance); fareTotal+=num(c.fareGas); });
+  var loanTotal=0, relAdvTotal=0, netTotal=0;
+  r.releases.forEach(function(x){ loanTotal+=num(x.loan); relAdvTotal+=num(x.advance); netTotal += num(x.loan)-num(x.notary)-num(x.fees1)-num(x.fees34)-num(x.advance); });
+  var expTotal = fareTotal; r.expenses.forEach(function(x){ expTotal+=num(x.amount); });
+  var denomTotal = num(r.denom.d1000)*1000 + num(r.denom.d500)*500 + num(r.denom.d200)*200 + num(r.denom.d100)*100 + num(r.denom.d50)*50 + num(r.denom.d20)*20 + num(r.denom.coins);
+  var expectedCash = num(r.beginningCash) + collTotal - netTotal - expTotal - relAdvTotal;
+  var variance = denomTotal - expectedCash;
+  return {collTotal:collTotal,savingsTotal:savingsTotal,edcTotal:edcTotal,advTotal:advTotal,fareTotal:fareTotal,loanTotal:loanTotal,relAdvTotal:relAdvTotal,netTotal:netTotal,expTotal:expTotal,denomTotal:denomTotal,expectedCash:expectedCash,variance:variance};
+}
+
+function visibleReports(){
+  var u = state.currentUser; if(!u) return [];
+  if(u.role==='dev' || u.role==='owner'){
+    return state.branchFilter==='__all__'? state.reports : state.reports.filter(function(r){ return r.branch===state.branchFilter; });
+  }
+  return state.reports.filter(function(r){ return r.branch === u.branch; });
+}
+
+/* ============================== ROOT RENDER ============================== */
+function render(){
+  var root = document.getElementById('appRoot');
+  if(!root) return;
+  if(!state.currentUser){ root.innerHTML = renderLogin(); attachLoginHandlers(); return; }
+  root.innerHTML = renderApp();
+  attachAppHandlers();
+}
+
+function renderLogin(){
+  var f = state.loginForm;
+  var branchOptions = state.branches.map(function(b){ return '<option value="'+esc(b)+'" '+(f.branch===b?'selected':'')+'>'+esc(b)+'</option>'; }).join('');
+  return (
+  '<div class="masthead"><div><h1>Daily Cashier Ledger</h1><p>Sign in to continue.</p></div></div>'+
+  '<div class="login-wrap"><div class="login-card">'+
+    '<h2>Sign in</h2>'+
+    '<p class="sub">No password yet — just tell us who you are.</p>'+
+    '<div class="field"><label>Your name</label><input id="li-name" type="text" value="'+esc(f.name)+'" placeholder="e.g. Veronica Engada"></div>'+
+    '<div class="field"><label>Role</label><select id="li-role">'+
+      '<option value="cashier" '+(f.role==='cashier'?'selected':'')+'>Cashier — enters daily reports</option>'+
+      '<option value="manager" '+(f.role==='manager'?'selected':'')+'>Manager — views one branch</option>'+
+      '<option value="owner" '+(f.role==='owner'?'selected':'')+'>Owner — views all branches</option>'+
+      '<option value="dev" '+(f.role==='dev'?'selected':'')+'>Dev — sees everything + logs</option>'+
+    '</select></div>'+
+    '<div class="field" id="branchFieldWrap"><label>Branch</label><select id="li-branch">'+branchOptions+'<option value="__new__">+ Add new branch...</option></select></div>'+
+    '<div class="field" id="newBranchWrap" style="display:none;"><label>New branch name</label><input id="li-newbranch" type="text" placeholder="e.g. Cainta"></div>'+
+    '<button class="btn" id="li-submit" style="width:100%; margin-top:6px;">Continue</button>'+
+    '<p class="login-note">This sign-in only decides what\'s shown in this browser tab — it isn\'t secure. Anyone with the app link can pick any role.</p>'+
+  '</div></div>');
+}
+
+function attachLoginHandlers(){
+  var roleSel = document.getElementById('li-role');
+  var branchWrap = document.getElementById('branchFieldWrap');
+  function syncBranchVisibility(){ branchWrap.style.display = (roleSel.value==='dev') ? 'none' : ''; }
+  syncBranchVisibility();
+  roleSel.onchange = syncBranchVisibility;
+
+  var branchSel = document.getElementById('li-branch');
+  var newBranchWrap = document.getElementById('newBranchWrap');
+  branchSel.onchange = function(){ newBranchWrap.style.display = branchSel.value==='__new__' ? '' : 'none'; };
+
+  document.getElementById('li-submit').onclick = async function(){
+    var name = document.getElementById('li-name').value.trim();
+    if(!name){ alert('Please enter your name.'); return; }
+    var role = roleSel.value;
+    var branch = branchSel.value;
+    if(branch==='__new__'){
+      var nb = document.getElementById('li-newbranch').value.trim();
+      if(!nb){ alert('Please enter the new branch name.'); return; }
+      await addBranch(nb);
+      branch = nb;
+    }
+    if(role==='dev') branch = '__all__';
+    state.currentUser = { name:name, role:role, branch:branch };
+    state.loginForm = { name:name, role:role, branch: branch==='__all__'? state.branches[0] : branch };
+    await saveProfile(state.loginForm);
+    if(role==='dev' || role==='owner'){ state.branchFilter = '__all__'; }
+    state.tab = ROLES[role].tabs[0];
+    if(state.tab==='new'){ state.draft = blankReport(role==='dev' ? state.branches[0] : branch); state.draft.preparedBy = name; }
+    await logAction('login', name+' signed in as '+ROLES[role].label, branch==='__all__'?null:branch);
+    if(role==='dev') await loadLogs();
+    render();
+  };
+}
+
+function renderApp(){
+  var u = state.currentUser;
+  var tabs = ROLES[u.role].tabs;
+  var tabBtns = tabs.map(function(t){ return '<button class="tab-btn '+(state.tab===t?'active':'')+'" data-tab="'+t+'">'+TAB_META[t].label+'<span class="sub">'+TAB_META[t].sub+'</span></button>'; }).join('');
+
+  var body = '';
+  if(state.tab==='new') body = renderNewReport();
+  else if(state.tab==='trends') body = renderTrends();
+  else if(state.tab==='history') body = renderHistory();
+  else if(state.tab==='weekly') body = renderWeekly();
+  else if(state.tab==='logs') body = renderLogs();
+
+  var fallbackBadge = state.usingFallbackData
+    ? '<div style="background:var(--gold-soft); color:var(--gold); border-bottom:1px solid var(--gold); padding:8px 22px; font-size:12px;">⚠ Firebase isn\'t connected — showing sample data only. Fill in your Firebase config in the script to save real reports.</div>'
+    : '';
+
+  return (
+  '<div class="masthead"><div><h1>Daily Cashier Ledger</h1><p>Upload the day\'s report, log it, and track collections across the week.</p></div>'+
+    '<div class="who"><div class="id"><div class="nm">'+esc(u.name)+'</div><div class="rl">'+ROLES[u.role].label+(u.branch && u.branch!=='__all__' ? ' · '+esc(u.branch) : '')+'</div></div>'+
+    '<button class="btn secondary" id="switchUserBtn" style="padding:7px 12px; font-size:12px;">Switch user</button></div>'+
+  '</div>'+
+  fallbackBadge+
+  '<div class="body-wrap"><div class="tab-rail">'+tabBtns+'</div><div class="content">'+body+'</div></div>');
+}
+
+/* ============================== NEW REPORT ============================== */
+function renderNewReport(){
+  var r = state.draft;
+  if(!r._review) r._review = {header:false,collectors:false,releases:false,expenses:false,denom:false};
+  var t = computeTotals(r);
+  var u = state.currentUser;
+  var branchLocked = (u.role==='cashier');
+
+  var branchField = branchLocked
+    ? '<div class="field"><label>Branch</label><input value="'+esc(r.branch)+'" disabled></div>'
+    : '<div class="field"><label>Branch</label><select id="f-branch">'+state.branches.map(function(b){ return '<option value="'+esc(b)+'" '+(r.branch===b?'selected':'')+'>'+esc(b)+'</option>'; }).join('')+'<option value="__new__">+ Add new branch...</option></select></div>';
+
+  var collectorsRows = r.collectors.map(function(c,i){
+    return '<tr><td><input data-f="collectors.'+i+'.name" value="'+esc(c.name)+'" placeholder="Collector name"></td>'+
+      '<td><input class="num-input" data-f="collectors.'+i+'.fareGas" value="'+esc(c.fareGas)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td><input class="num-input" data-f="collectors.'+i+'.edc" value="'+esc(c.edc)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td><input class="num-input" data-f="collectors.'+i+'.advance" value="'+esc(c.advance)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td><input class="num-input" data-f="collectors.'+i+'.collection" value="'+esc(c.collection)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td><input class="num-input" data-f="collectors.'+i+'.savings" value="'+esc(c.savings)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td class="del-col"><button class="row-del" data-del="collectors.'+i+'">✕</button></td></tr>';
+  }).join('');
+
+  var releaseRows = r.releases.map(function(x,i){
+    var net = num(x.loan)-num(x.notary)-num(x.fees1)-num(x.fees34)-num(x.advance);
+    return '<tr><td><input data-f="releases.'+i+'.fo" value="'+esc(x.fo)+'" placeholder="Collector"></td>'+
+      '<td><input data-f="releases.'+i+'.borrower" value="'+esc(x.borrower)+'" placeholder="Borrower name"></td>'+
+      '<td><input class="num-input" data-f="releases.'+i+'.loan" value="'+esc(x.loan)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td><input class="num-input" data-f="releases.'+i+'.notary" value="'+esc(x.notary)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td><input class="num-input" data-f="releases.'+i+'.fees1" value="'+esc(x.fees1)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td><input class="num-input" data-f="releases.'+i+'.fees34" value="'+esc(x.fees34)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td><input class="num-input" data-f="releases.'+i+'.advance" value="'+esc(x.advance)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td class="readonly">'+fmt(net)+'</td>'+
+      '<td class="del-col"><button class="row-del" data-del="releases.'+i+'">✕</button></td></tr>';
+  }).join('');
+
+  var expenseRows = r.expenses.map(function(x,i){
+    return '<tr><td><input data-f="expenses.'+i+'.label" value="'+esc(x.label)+'" placeholder="Expense name"></td>'+
+      '<td><input class="num-input" data-f="expenses.'+i+'.amount" value="'+esc(x.amount)+'" inputmode="decimal" placeholder="0"></td>'+
+      '<td class="del-col"><button class="row-del" data-del="expenses.'+i+'">✕</button></td></tr>';
+  }).join('');
+
+  var denomDefs = [['d1000',1000],['d500',500],['d200',200],['d100',100],['d50',50],['d20',20]];
+  var denomCards = denomDefs.map(function(pair){
+    var key=pair[0], val=pair[1]; var qty = num(r.denom[key]);
+    return '<div class="denom-card"><div class="den-label">\u20b1'+val+'</div><div class="den-calc"><span class="eq">\u00d7</span>'+
+      '<input data-f="denom.'+key+'" value="'+esc(r.denom[key])+'" inputmode="numeric" placeholder="0"><span class="eq">=</span>'+
+      '<span class="subtotal">'+fmt(qty*val)+'</span></div></div>';
+  }).join('') + '<div class="denom-card"><div class="den-label">Coins</div><div class="den-calc"><input data-f="denom.coins" value="'+esc(r.denom.coins)+'" inputmode="decimal" placeholder="0" style="width:90px"></div></div>';
+
+  var imgThumbs = r.images.map(function(src,i){
+    return '<div class="thumb"><img src="'+src+'"><button class="rm" data-rm-img="'+i+'">✕</button><button class="fill-btn" data-fill-img="'+i+'">Auto-fill from this ✨</button></div>';
+  }).join('');
+  var fileThumbs = r.files.map(function(f,i){
+    return '<div class="thumb"><div class="file-icon-box"><div class="ic">\ud83d\udcc4</div><div class="fn">'+esc(f.name)+'</div></div><button class="rm" data-rm-file="'+i+'">✕</button><button class="fill-btn" data-fill-file="'+i+'">Auto-fill from this ✨</button></div>';
+  }).join('');
+
+  return (
+  '<div class="sheet"><div class="sheet-header"><h2>'+(state.editingId? 'Edit report' : 'New daily report')+'</h2><span class="meta">'+(state.editingId? 'Editing saved entry' : 'Not yet saved')+'</span></div>'+
+  '<div class="section"><h3>Report details</h3>'+
+    (r._review.header? '<div class="review-banner">✨ Filled from upload — please check date, branch, prepared-by and beginning cash</div>':'')+
+    '<div class="field-row"><div class="field"><label>Date</label><input type="date" id="f-date" value="'+esc(r.date)+'"></div>'+branchField+
+    '<div class="field wide"><label>Prepared by</label><input type="text" id="f-preparedBy" value="'+esc(r.preparedBy)+'" placeholder="Cashier / secretary name"></div>'+
+    '<div class="field"><label>Beginning cash</label><input id="f-beginningCash" value="'+esc(r.beginningCash)+'" inputmode="decimal" placeholder="0"></div></div></div>'+
+  '<div class="section"><h3>Attach report screenshot or CSV</h3>'+
+    '<p class="hint">Upload a photo (.jpg/.png) or a CSV export of the report, then hit "Auto-fill from this" to have Claude fill the fields below for you to review.</p>'+
+    '<div class="upload-box" id="uploadBox"><div class="icon">＋</div><div class="txt">Click to upload, or drop files here — images or .csv</div>'+
+    '<input type="file" id="fileInput" accept="image/*,.csv" multiple style="display:none"></div>'+
+    ((imgThumbs||fileThumbs)? '<div class="thumbs">'+imgThumbs+fileThumbs+'</div>' : '')+
+  '</div>'+
+  '<div class="section"><h3>Collections by collector</h3>'+
+    (r._review.collectors? '<div class="review-banner">✨ Filled from upload — please check each collector\'s figures</div>':'')+
+    '<table class="ledger"><thead><tr><th class="txt">Collector</th><th>Fare/Gas</th><th>EDC</th><th>Advance</th><th>Collection</th><th>Savings</th><th class="del-col"></th></tr></thead>'+
+    '<tbody>'+collectorsRows+'</tbody><tfoot><tr><td>Total</td><td>'+fmt(t.fareTotal)+'</td><td>'+fmt(t.edcTotal)+'</td><td>'+fmt(t.advTotal)+'</td><td>'+fmt(t.collTotal)+'</td><td>'+fmt(t.savingsTotal)+'</td><td class="del-col"></td></tr></tfoot></table>'+
+    '<button class="add-row" data-add="collectors">+ Add collector</button></div>'+
+  '<div class="section"><h3>Loan releases</h3><p class="hint">Net release = Loan − Notary − 1% fee − 3–4% fee − Advance (calculated automatically).</p>'+
+    (r._review.releases? '<div class="review-banner">✨ Filled from upload — please check each release</div>':'')+
+    '<table class="ledger"><thead><tr><th class="txt">Collector</th><th class="txt">Borrower</th><th>Loan</th><th>Notary</th><th>1% fee</th><th>3-4% fee</th><th>Advance</th><th>Net</th><th class="del-col"></th></tr></thead>'+
+    '<tbody>'+releaseRows+'</tbody><tfoot><tr><td colspan="2">Total</td><td>'+fmt(t.loanTotal)+'</td><td></td><td></td><td></td><td>'+fmt(t.relAdvTotal)+'</td><td>'+fmt(t.netTotal)+'</td><td class="del-col"></td></tr></tfoot></table>'+
+    '<button class="add-row" data-add="releases">+ Add release</button></div>'+
+  '<div class="section"><h3>Operating expenses</h3>'+
+    (r._review.expenses? '<div class="review-banner">✨ Filled from upload — please check each expense</div>':'')+
+    '<table class="ledger"><thead><tr><th class="txt">Expense</th><th>Amount</th><th class="del-col"></th></tr></thead><tbody>'+expenseRows+'</tbody>'+
+    '<tfoot><tr><td>Total (incl. fare/gas above)</td><td>'+fmt(t.expTotal)+'</td><td class="del-col"></td></tr></tfoot></table>'+
+    '<button class="add-row" data-add="expenses">+ Add expense</button></div>'+
+  '<div class="section"><h3>Cash on hand — bill count</h3>'+(r._review.denom? '<div class="review-banner">✨ Filled from upload — please recount if unsure</div>':'')+'<div class="denom-grid">'+denomCards+'</div></div>'+
+  '<div class="section"><h3>Summary</h3><div class="summary-strip">'+
+    '<div class="summary-item"><div class="lbl">Collection</div><div class="val">'+fmt(t.collTotal)+'</div></div>'+
+    '<div class="summary-item"><div class="lbl">Net releases</div><div class="val">'+fmt(t.netTotal)+'</div></div>'+
+    '<div class="summary-item"><div class="lbl">Expenses</div><div class="val">'+fmt(t.expTotal)+'</div></div>'+
+    '<div class="summary-item"><div class="lbl">Counted cash</div><div class="val">'+fmt(t.denomTotal)+'</div></div>'+
+    '<div class="summary-item '+(Math.abs(t.variance)<1 ? 'good':'warn')+'"><div class="lbl">Expected vs. counted</div><div class="val">'+(t.variance===0? 'Balanced' : (t.variance>0? '+':'') + fmt(t.variance))+'</div></div>'+
+  '</div></div>'+
+  '<div class="section"><h3>Notes</h3><textarea id="f-notes" rows="2" style="width:100%; font-family:var(--sans); font-size:13px; border:1px solid var(--paper-line); background:var(--surface-alt); color:var(--ink); padding:8px;" placeholder="Anything the next person should know...">'+esc(r.notes)+'</textarea></div>'+
+  '<div class="actions-bar">'+(state.editingId? '<button class="btn secondary" id="cancelEdit">Cancel edit</button>' : '<button class="btn secondary" id="clearDraft">Clear form</button>')+
+    '<button class="btn" id="saveReport">'+(state.editingId? 'Save changes' : 'Save report')+'</button></div>'+
+  '</div>');
+}
+
+/* ============================== TRENDS ============================== */
+function buildDateRange(rangeDays){
+  var end = new Date(); end.setHours(0,0,0,0);
+  var days = [];
+  for(var i=rangeDays-1;i>=0;i--){
+    var d = new Date(end); d.setDate(d.getDate()-i);
+    if(d.getDay()===0) continue;
+    days.push(d.toISOString().slice(0,10));
+  }
+  return days;
+}
+function metricTotalForReport(report, metricKey){
+  var t = computeTotals(report);
+  if(metricKey==='collection') return t.collTotal;
+  if(metricKey==='savings') return t.savingsTotal;
+  if(metricKey==='netRelease') return t.netTotal;
+  if(metricKey==='expenses') return t.expTotal;
+  return 0;
+}
+function buildTrendSeries(){
+  var rangeDays = Math.min(90, state.trendRange || 30);
+  var days = buildDateRange(rangeDays);
+  var pool = visibleReports();
+  var byDate = {};
+  pool.forEach(function(r){ (byDate[r.date] = byDate[r.date]||[]).push(r); });
+  return days.map(function(d){
+    var reports = byDate[d]||[];
+    var value = 0; reports.forEach(function(r){ value += metricTotalForReport(r, state.trendMetric); });
+    return {date:d, value:value, count:reports.length};
+  });
+}
+function collectorMetricValue(report, collectorName, metricKey){
+  var row = null;
+  for(var i=0;i<report.collectors.length;i++){ if((report.collectors[i].name||'').trim().toLowerCase()===collectorName.toLowerCase()){ row = report.collectors[i]; break; } }
+  if(metricKey==='collection') return row? num(row.collection) : 0;
+  if(metricKey==='savings') return row? num(row.savings) : 0;
+  if(metricKey==='netRelease'){
+    var sum=0; report.releases.forEach(function(x){ if((x.fo||'').trim().toLowerCase()===collectorName.toLowerCase()){ sum += num(x.loan)-num(x.notary)-num(x.fees1)-num(x.fees34)-num(x.advance); } });
+    return sum;
+  }
+  return 0;
+}
+function buildPerCollectorSeries(){
+  var rangeDays = Math.min(90, state.trendRange || 30);
+  var days = buildDateRange(rangeDays);
+  var pool = visibleReports();
+  var byDate = {};
+  pool.forEach(function(r){ (byDate[r.date] = byDate[r.date]||[]).push(r); });
+  var nameSet = {};
+  pool.forEach(function(r){ r.collectors.forEach(function(c){ if(c.name && c.name.trim()) nameSet[c.name.trim()]=true; }); });
+  var nameList = Object.keys(nameSet).length? Object.keys(nameSet) : ['Casanova','Magno','Josol','Rabanes','Bulic'];
+  var metricKey = state.trendMetric==='expenses' ? 'collection' : state.trendMetric;
+  var seriesByName = nameList.map(function(name){
+    var points = days.map(function(d){
+      var reports = byDate[d]||[];
+      var value = 0; reports.forEach(function(r){ value += collectorMetricValue(r,name,metricKey); });
+      return {date:d, value:value, count:reports.length};
+    });
+    return {name:name, points:points};
+  });
+  return {days:days, seriesByName:seriesByName};
+}
+function buildLineChartSVG(series){
+  var W=880,H=300,padL=58,padR=16,padT=16,padB=34;
+  var plotW=W-padL-padR, plotH=H-padT-padB;
+  var maxVal = Math.max.apply(null, [1].concat(series.map(function(p){return p.value;}))) * 1.15;
+  var n = series.length;
+  function xFor(i){ return padL + (n<=1? plotW/2 : (i/(n-1))*plotW); }
+  function yFor(v){ return padT + plotH - (v/maxVal)*plotH; }
+  var grid = [0,0.25,0.5,0.75,1].map(function(f){
+    var v = maxVal*f, y = yFor(v);
+    return '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="var(--paper-line)" stroke-width="1"/>'+
+           '<text x="'+(padL-8)+'" y="'+(y+4)+'" font-size="10" fill="var(--ink-soft)" text-anchor="end">'+fmt(Math.round(v))+'</text>';
+  }).join('');
+  var pathD = series.map(function(p,i){ return (i===0?'M':'L')+xFor(i).toFixed(1)+','+yFor(p.value).toFixed(1); }).join(' ');
+  var points = series.map(function(p,i){
+    var has = p.count>0;
+    return '<circle cx="'+xFor(i).toFixed(1)+'" cy="'+yFor(p.value).toFixed(1)+'" r="'+(has?5:2.5)+'" fill="'+(has? 'var(--gold)':'var(--paper-line)')+'" stroke="var(--surface)" stroke-width="1.5" class="'+(has?'trend-pt':'trend-pt-empty')+'" data-point-date="'+p.date+'" style="cursor:'+(has?'pointer':'default')+'"><title>'+fmtDate(p.date)+': '+fmt(p.value)+(has?'':' (no report)')+'</title></circle>';
+  }).join('');
+  var labelStep = Math.max(1, Math.round(n/7));
+  var xLabels = series.map(function(p,i){ return {p:p,i:i}; }).filter(function(o){ return o.i%labelStep===0 || o.i===n-1; })
+    .map(function(o){ return '<text x="'+xFor(o.i).toFixed(1)+'" y="'+(H-10)+'" font-size="10" fill="var(--ink-soft)" text-anchor="middle">'+o.p.date.slice(5)+'</text>'; }).join('');
+  return '<div class="trend-chart-wrap"><svg viewBox="0 0 '+W+' '+H+'">'+grid+'<path d="'+pathD+'" fill="none" stroke="var(--green)" stroke-width="2.5"/>'+points+xLabels+'</svg></div>';
+}
+function buildMultiLineChartSVG(days, seriesByName){
+  var W=880,H=320,padL=58,padR=16,padT=16,padB=34;
+  var plotW=W-padL-padR, plotH=H-padT-padB;
+  var allVals = [];
+  seriesByName.forEach(function(s){ s.points.forEach(function(p){ allVals.push(p.value); }); });
+  var maxVal = Math.max.apply(null, [1].concat(allVals)) * 1.15;
+  var n = days.length;
+  function xFor(i){ return padL + (n<=1? plotW/2 : (i/(n-1))*plotW); }
+  function yFor(v){ return padT + plotH - (v/maxVal)*plotH; }
+  var grid = [0,0.25,0.5,0.75,1].map(function(f){
+    var v = maxVal*f, y = yFor(v);
+    return '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="var(--paper-line)" stroke-width="1"/>'+
+           '<text x="'+(padL-8)+'" y="'+(y+4)+'" font-size="10" fill="var(--ink-soft)" text-anchor="end">'+fmt(Math.round(v))+'</text>';
+  }).join('');
+  var lines = seriesByName.map(function(s,si){
+    var color = COLLECTOR_COLORS[si % COLLECTOR_COLORS.length];
+    var pathD = s.points.map(function(p,i){ return (i===0?'M':'L')+xFor(i).toFixed(1)+','+yFor(p.value).toFixed(1); }).join(' ');
+    var pts = s.points.map(function(p,i){
+      if(p.count<=0) return '';
+      return '<circle cx="'+xFor(i).toFixed(1)+'" cy="'+yFor(p.value).toFixed(1)+'" r="4" fill="'+color+'" stroke="var(--surface)" stroke-width="1.3" class="trend-pt" data-point-date="'+p.date+'" style="cursor:pointer"><title>'+esc(s.name)+' · '+fmtDate(p.date)+': '+fmt(p.value)+'</title></circle>';
+    }).join('');
+    return '<path d="'+pathD+'" fill="none" stroke="'+color+'" stroke-width="2" opacity="0.9"/>'+pts;
+  }).join('');
+  var labelStep = Math.max(1, Math.round(n/7));
+  var xLabels = days.map(function(d,i){ return {d:d,i:i}; }).filter(function(o){ return o.i%labelStep===0 || o.i===n-1; })
+    .map(function(o){ return '<text x="'+xFor(o.i).toFixed(1)+'" y="'+(H-10)+'" font-size="10" fill="var(--ink-soft)" text-anchor="middle">'+o.d.slice(5)+'</text>'; }).join('');
+  var legend = seriesByName.map(function(s,si){
+    var color = COLLECTOR_COLORS[si % COLLECTOR_COLORS.length];
+    return '<div style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft);"><span style="width:10px; height:10px; border-radius:50%; background:'+color+'; display:inline-block;"></span>'+esc(s.name)+'</div>';
+  }).join('');
+  return '<div class="trend-chart-wrap"><svg viewBox="0 0 '+W+' '+H+'">'+grid+lines+xLabels+'</svg></div><div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px;">'+legend+'</div>';
+}
+function renderTrends(){
+  var u = state.currentUser;
+  var availableMetricKeys = state.trendView==='perCollector' ? ['collection','savings','netRelease'] : Object.keys(METRICS);
+  if(availableMetricKeys.indexOf(state.trendMetric)===-1) state.trendMetric = 'collection';
+
+  var filterBar = (u.role==='dev'||u.role==='owner') ? (
+    '<div class="branch-filter"><label style="font-size:11.5px; color:var(--ink-soft);">Branch</label><select id="branchFilterSel">'+
+    '<option value="__all__" '+(state.branchFilter==='__all__'?'selected':'')+'>All branches</option>'+
+    state.branches.map(function(b){ return '<option value="'+esc(b)+'" '+(state.branchFilter===b?'selected':'')+'>'+esc(b)+'</option>'; }).join('')+
+    '</select></div>') : '';
+
+  var metricBtns = availableMetricKeys.map(function(k){ return '<button class="btn secondary pill-btn '+(state.trendMetric===k?'active-pill':'')+'" data-metric="'+k+'">'+METRICS[k].label+'</button>'; }).join('');
+  var viewBtns = '<button class="btn secondary pill-btn '+(state.trendView!=='perCollector'?'active-pill':'')+'" data-view="total">All (total)</button>'+
+    '<button class="btn secondary pill-btn '+(state.trendView==='perCollector'?'active-pill':'')+'" data-view="perCollector">By collector</button>';
+
+  var chartHtml, statsHtml;
+  if(state.trendView==='perCollector'){
+    var pc = buildPerCollectorSeries();
+    chartHtml = buildMultiLineChartSVG(pc.days, pc.seriesByName);
+    var totalsByName = pc.seriesByName.map(function(s){ var tot=0; s.points.forEach(function(p){ tot+=p.value; }); return {name:s.name, total:tot}; });
+    statsHtml = '<div class="summary-strip">'+totalsByName.map(function(t){ return '<div class="summary-item"><div class="lbl">'+esc(t.name)+'</div><div class="val">'+fmt(t.total)+'</div></div>'; }).join('')+'</div>';
+  } else {
+    var series = buildTrendSeries();
+    var withData = series.filter(function(p){ return p.count>0; });
+    var total = 0; series.forEach(function(p){ total+=p.value; });
+    var avg = withData.length? total/withData.length : 0;
+    chartHtml = buildLineChartSVG(series);
+    statsHtml = '<div class="summary-strip">'+
+        '<div class="summary-item"><div class="lbl">Total ('+METRICS[state.trendMetric].label+')</div><div class="val">'+fmt(total)+'</div></div>'+
+        '<div class="summary-item"><div class="lbl">Average per active day</div><div class="val">'+fmt(Math.round(avg))+'</div></div>'+
+        '<div class="summary-item"><div class="lbl">Days with a report</div><div class="val">'+withData.length+' / '+series.length+'</div></div>'+
+      '</div>';
+  }
+
+  return (
+  '<div class="sheet"><div class="sheet-header"><h2>Trends</h2>'+filterBar+'<span class="meta">Last '+Math.min(90,state.trendRange)+' days · Sundays excluded (business closed)</span></div>'+
+  '<div class="week-picker"><div class="field"><label>Range</label><select id="trendRangeSel">'+
+    '<option value="7" '+(state.trendRange===7?'selected':'')+'>7 days</option>'+
+    '<option value="14" '+(state.trendRange===14?'selected':'')+'>14 days</option>'+
+    '<option value="30" '+(state.trendRange===30?'selected':'')+'>30 days</option>'+
+    '<option value="60" '+(state.trendRange===60?'selected':'')+'>60 days</option>'+
+    '<option value="90" '+(state.trendRange===90?'selected':'')+'>90 days (max)</option></select></div>'+
+    '<div class="field"><label>View</label><div style="display:flex; gap:6px;">'+viewBtns+'</div></div>'+
+    '<div class="field"><label>Metric</label><div style="display:flex; gap:6px; flex-wrap:wrap;">'+metricBtns+'</div></div></div>'+
+  '<div class="section"><p class="hint">Click a dot to open that day\'s report.'+(state.trendView==='perCollector'?'':' Grey dots mean no report was saved that day.')+'</p>'+chartHtml+'</div>'+
+  '<div class="section">'+statsHtml+'</div></div>');
+}
+function jumpToDate(date){
+  var matches = visibleReports().filter(function(r){ return r.date===date; });
+  if(!matches.length) return;
+  state.historyDateFilter = date;
+  state.tab = 'history';
+  state.openHistoryId = matches.length===1? matches[0].id : null;
+  render();
+}
+
+/* ============================== HISTORY ============================== */
+function renderHistory(){
+  var u = state.currentUser;
+  var list = visibleReports();
+  if(state.historyDateFilter){ list = list.filter(function(r){ return r.date===state.historyDateFilter; }); }
+  var filterBar = (u.role==='dev'||u.role==='owner') ? (
+    '<div class="branch-filter"><label style="font-size:11.5px; color:var(--ink-soft);">Branch</label><select id="branchFilterSel">'+
+    '<option value="__all__" '+(state.branchFilter==='__all__'?'selected':'')+'>All branches</option>'+
+    state.branches.map(function(b){ return '<option value="'+esc(b)+'" '+(state.branchFilter===b?'selected':'')+'>'+esc(b)+'</option>'; }).join('')+
+    '</select></div>') : '';
+  var dateChip = state.historyDateFilter ? ('<div class="branch-filter"><span class="pill">📅 '+fmtDate(state.historyDateFilter)+'</span><button class="btn secondary" id="clearDateFilter" style="padding:4px 10px; font-size:11px;">Clear</button></div>') : '';
+
+  if(!list.length){
+    return '<div class="sheet"><div class="sheet-header"><h2>Report history</h2>'+filterBar+dateChip+'</div>'+
+      '<div class="empty-state"><div class="big">No reports yet</div><div>'+(state.historyDateFilter? 'No report was saved for this branch on this date.' : 'Saved daily reports will appear here, newest first.')+'</div></div></div>';
+  }
+
+  var canEdit = (u.role==='dev' || u.role==='cashier');
+  var cards = list.map(function(r){
+    var t = computeTotals(r);
+    var open = state.openHistoryId===r.id;
+    return '<div class="history-card '+(open?'open':'')+'" data-id="'+r.id+'">'+
+      '<div class="hc-head" data-toggle="'+r.id+'"><div><div class="hc-date">'+fmtDate(r.date)+' <span class="pill">'+esc(r.branch||'—')+'</span></div>'+
+      '<div class="hc-sub">'+esc(r.preparedBy||'Unspecified')+' · '+r.images.length+' photo'+(r.images.length===1?'':'s')+((r.files&&r.files.length)? ' · '+r.files.length+' file'+(r.files.length===1?'':'s'):'')+'</div></div>'+
+      '<div class="hc-figs"><div><span class="f-lbl">Collection</span>'+fmt(t.collTotal)+'</div><div><span class="f-lbl">Net release</span>'+fmt(t.netTotal)+'</div><div><span class="f-lbl">Expenses</span>'+fmt(t.expTotal)+'</div></div>'+
+      '<span class="chev">▶</span></div>'+
+      '<div class="hc-body">'+
+        (r.images.length? '<div class="thumbs">'+r.images.map(function(src){ return '<div class="thumb"><img src="'+src+'"></div>'; }).join('')+'</div>':'')+
+        '<table class="ledger" style="margin-top:12px;"><thead><tr><th class="txt">Collector</th><th>Fare/Gas</th><th>EDC</th><th>Advance</th><th>Collection</th><th>Savings</th></tr></thead>'+
+        '<tbody>'+r.collectors.map(function(c){ return '<tr><td>'+esc(c.name)+'</td><td>'+fmt(num(c.fareGas))+'</td><td>'+fmt(num(c.edc))+'</td><td>'+fmt(num(c.advance))+'</td><td>'+fmt(num(c.collection))+'</td><td>'+fmt(num(c.savings))+'</td></tr>'; }).join('')+'</tbody></table>'+
+        '<table class="ledger" style="margin-top:12px;"><thead><tr><th class="txt">Collector</th><th class="txt">Borrower</th><th>Loan</th><th>Net</th></tr></thead>'+
+        '<tbody>'+r.releases.map(function(x){ return '<tr><td>'+esc(x.fo)+'</td><td>'+esc(x.borrower)+'</td><td>'+fmt(num(x.loan))+'</td><td>'+fmt(num(x.loan)-num(x.notary)-num(x.fees1)-num(x.fees34)-num(x.advance))+'</td></tr>'; }).join('')+'</tbody></table>'+
+        (r.notes? '<p class="hint" style="margin-top:12px;"><strong>Notes:</strong> '+esc(r.notes)+'</p>' : '')+
+        (canEdit? '<div class="actions-bar" style="padding:14px 0 0;"><button class="btn danger" data-del-report="'+r.id+'">Delete</button><button class="btn secondary" data-edit-report="'+r.id+'">Edit</button></div>' : '')+
+      '</div></div>';
+  }).join('');
+
+  return '<div class="sheet"><div class="sheet-header"><h2>Report history</h2>'+filterBar+dateChip+'<span class="meta">'+list.length+' saved</span></div><div class="history-list">'+cards+'</div></div>';
+}
+
+/* ============================== WEEKLY ============================== */
+function renderWeekly(){
+  var u = state.currentUser;
+  var start = state.weekStart;
+  var days = [];
+  for(var i=0;i<6;i++){ var d = new Date(start+'T00:00:00'); d.setDate(d.getDate()+i); days.push(d.toISOString().slice(0,10)); }
+  var dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  var pool = visibleReports();
+  var weekReports = pool.filter(function(r){ return days.indexOf(r.date)!==-1; });
+  var byDate = {}; weekReports.forEach(function(r){ byDate[r.date]=r; });
+
+  var nameSet = {};
+  weekReports.forEach(function(r){ r.collectors.forEach(function(c){ if(c.name && c.name.trim()) nameSet[c.name.trim()]=true; }); });
+  var nameList = Object.keys(nameSet).length? Object.keys(nameSet) : ['Casanova','Magno','Josol','Rabanes','Bulic'];
+
+  function cell(date,name,field){
+    var r = byDate[date]; if(!r) return null;
+    var c = null;
+    for(var i=0;i<r.collectors.length;i++){ if((r.collectors[i].name||'').trim().toLowerCase()===name.toLowerCase()){ c=r.collectors[i]; break; } }
+    return c? num(c[field]) : null;
+  }
+
+  var rows = nameList.map(function(name){
+    var cells = days.map(function(d){ var v = cell(d,name,'collection'); return '<td>'+(v===null? '<span class="zero">—</span>' : fmt(v))+'</td>'; }).join('');
+    var rowTotal = 0; days.forEach(function(d){ rowTotal += (cell(d,name,'collection')||0); });
+    return '<tr><td>'+esc(name)+'</td>'+cells+'<td>'+fmt(rowTotal)+'</td></tr>';
+  }).join('');
+
+  function sumRow(field,label){
+    var cells = days.map(function(d){
+      var r = byDate[d]; if(!r) return '<td><span class="zero">—</span></td>';
+      var s=0; r.collectors.forEach(function(c){ s+=num(c[field]); });
+      return '<td>'+fmt(s)+'</td>';
+    }).join('');
+    var total=0; days.forEach(function(d){ var r=byDate[d]; if(r) r.collectors.forEach(function(c){ total+=num(c[field]); }); });
+    return '<tr><td>'+label+'</td>'+cells+'<td>'+fmt(total)+'</td></tr>';
+  }
+
+  var filterBar = (u.role==='dev'||u.role==='owner') ? (
+    '<div class="branch-filter"><label style="font-size:11.5px; color:var(--ink-soft);">Branch</label><select id="branchFilterSel">'+
+    '<option value="__all__" '+(state.branchFilter==='__all__'?'selected':'')+'>All branches</option>'+
+    state.branches.map(function(b){ return '<option value="'+esc(b)+'" '+(state.branchFilter===b?'selected':'')+'>'+esc(b)+'</option>'; }).join('')+
+    '</select></div>') : '';
+
+  return '<div class="sheet"><div class="sheet-header"><h2>Weekly summary</h2>'+filterBar+'<span class="meta">Week of '+fmtDate(start)+'</span></div>'+
+    '<div class="week-picker"><div class="field"><label>Week starting (Monday)</label><input type="date" id="weekStartInput" value="'+esc(start)+'"></div>'+
+    '<button class="btn secondary" id="prevWeek">◀ Prev week</button><button class="btn secondary" id="nextWeek">Next week ▶</button></div>'+
+    '<div class="section" style="overflow-x:auto;"><table class="weekly"><thead><tr><th>Collector</th>'+
+    dayLabels.map(function(l,i){ return '<th>'+l+'<br><span style="font-weight:400;font-size:10px;">'+days[i].slice(5)+'</span></th>'; }).join('')+
+    '<th>Week total</th></tr></thead><tbody>'+rows+'</tbody><tfoot>'+sumRow('collection','Total collection')+sumRow('savings','Savings')+sumRow('advance','Advance')+'</tfoot></table></div>'+
+    '<p class="small-note">Figures pull automatically from saved daily reports whose date falls in this week (Sundays excluded — business closed). Days without a saved report show a dash.</p></div>';
+}
+
+/* ============================== LOGS ============================== */
+function renderLogs(){
+  if(!state.logs.length){
+    return '<div class="sheet"><div class="sheet-header"><h2>Activity log</h2></div><div class="empty-state"><div class="big">No activity yet</div><div>Logins, saves, edits and deletions will show up here.</div></div></div>';
+  }
+  var rows = state.logs.map(function(l){
+    return '<tr><td>'+fmtWhen(l.ts)+'</td><td>'+esc(l.user)+'</td><td>'+esc(l.role)+'</td><td>'+esc(l.branch||'—')+'</td>'+
+      '<td class="'+(l.action==='error'?'act-error':'act-ok')+'">'+esc(l.action)+'</td><td>'+esc(l.detail||'')+'</td></tr>';
+  }).join('');
+  return '<div class="sheet"><div class="sheet-header"><h2>Activity log</h2><span class="meta">'+state.logs.length+' entries (most recent 500)</span></div>'+
+    '<div class="section" style="overflow-x:auto;"><table class="logs"><thead><tr><th>When</th><th>User</th><th>Role</th><th>Branch</th><th>Action</th><th>Detail</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+/* ============================== FIELD HELPERS ============================== */
+function setDeep(obj, path, value){
+  var parts = path.split('.');
+  var cur = obj;
+  for(var i=0;i<parts.length-1;i++){ var p = parts[i]; cur = cur[isFinite(p)? parseInt(p,10): p]; }
+  var last = parts[parts.length-1];
+  cur[isFinite(last)? parseInt(last,10) : last] = value;
+}
+function clearReview(group){ if(state.draft._review) state.draft._review[group] = false; }
+
+function renderInPlace(){
+  var active = document.activeElement;
+  var path = active && active.dataset ? active.dataset.f : null;
+  var selStart = active && active.selectionStart;
+  var selEnd = active && active.selectionEnd;
+  render();
+  if(path){
+    var el = document.querySelector('[data-f="'+path+'"]');
+    if(el){ el.focus(); try{ el.setSelectionRange(selStart, selEnd); }catch(e){} }
+  }
+}
+
+/* ============================== EVENT HANDLING ============================== */
+function attachAppHandlers(){
+  var switchBtn = document.getElementById('switchUserBtn');
+  if(switchBtn) switchBtn.onclick = function(){ state.currentUser = null; render(); };
+  var tabBtns = document.querySelectorAll('.tab-btn');
+  for(var i=0;i<tabBtns.length;i++){
+    (function(b){ b.onclick = function(){ state.tab=b.dataset.tab; if(b.dataset.tab==='history') state.historyDateFilter=null; render(); }; })(tabBtns[i]);
+  }
+  var branchFilterSel = document.getElementById('branchFilterSel');
+  if(branchFilterSel) branchFilterSel.onchange = function(){ state.branchFilter = branchFilterSel.value; render(); };
+
+  if(state.tab==='new') attachNewReportHandlers();
+  if(state.tab==='trends') attachTrendsHandlers();
+  if(state.tab==='history') attachHistoryHandlers();
+  if(state.tab==='weekly') attachWeeklyHandlers();
+}
+
+function attachTrendsHandlers(){
+  var rangeSel = document.getElementById('trendRangeSel');
+  if(rangeSel) rangeSel.onchange = function(){ state.trendRange = Math.min(90, parseInt(rangeSel.value,10)); render(); };
+  var metricBtns = document.querySelectorAll('[data-metric]');
+  for(var i=0;i<metricBtns.length;i++){ (function(b){ b.onclick = function(){ state.trendMetric = b.dataset.metric; render(); }; })(metricBtns[i]); }
+  var viewBtns = document.querySelectorAll('[data-view]');
+  for(var j=0;j<viewBtns.length;j++){ (function(b){ b.onclick = function(){ state.trendView = b.dataset.view; render(); }; })(viewBtns[j]); }
+  var pts = document.querySelectorAll('.trend-pt');
+  for(var k=0;k<pts.length;k++){ (function(el){ el.onclick = function(){ jumpToDate(el.dataset.pointDate); }; })(pts[k]); }
+}
+
+function attachNewReportHandlers(){
+  var c = document.getElementById('appRoot');
+  var fields = c.querySelectorAll('[data-f]');
+  for(var i=0;i<fields.length;i++){
+    (function(el){ el.oninput = function(){ setDeep(state.draft, el.dataset.f, el.value); clearReview(el.dataset.f.split('.')[0]); renderInPlace(); }; })(fields[i]);
+  }
+
+  var dateEl = document.getElementById('f-date'); if(dateEl) dateEl.onchange = function(){ state.draft.date = dateEl.value; clearReview('header'); };
+  var branchEl = document.getElementById('f-branch');
+  if(branchEl) branchEl.onchange = async function(){
+    if(branchEl.value==='__new__'){
+      var nb = prompt('New branch name:');
+      if(nb && nb.trim()){ await addBranch(nb.trim()); state.draft.branch = nb.trim(); }
+      render();
+    } else { state.draft.branch = branchEl.value; clearReview('header'); }
+  };
+  var prepEl = document.getElementById('f-preparedBy'); if(prepEl) prepEl.oninput = function(){ state.draft.preparedBy = prepEl.value; clearReview('header'); };
+  var begEl = document.getElementById('f-beginningCash'); if(begEl) begEl.oninput = function(){ state.draft.beginningCash = begEl.value; clearReview('header'); renderInPlace(); };
+  var notesEl = document.getElementById('f-notes'); if(notesEl) notesEl.oninput = function(){ state.draft.notes = notesEl.value; };
+
+  var delBtns = c.querySelectorAll('[data-del]');
+  for(var d=0; d<delBtns.length; d++){
+    (function(btn){ btn.onclick = function(){
+      var parts = btn.dataset.del.split('.'); var group=parts[0], idx=parts[1];
+      state.draft[group].splice(parseInt(idx,10),1);
+      if(state.draft[group].length===0){
+        if(group==='collectors') state.draft.collectors.push(blankCollector(''));
+        if(group==='releases') state.draft.releases.push(blankRelease());
+        if(group==='expenses') state.draft.expenses.push({label:'',amount:''});
+      }
+      render();
+    }; })(delBtns[d]);
+  }
+  var addBtns = c.querySelectorAll('[data-add]');
+  for(var a=0;a<addBtns.length;a++){
+    (function(btn){ btn.onclick = function(){
+      var g = btn.dataset.add;
+      if(g==='collectors') state.draft.collectors.push(blankCollector(''));
+      if(g==='releases') state.draft.releases.push(blankRelease());
+      if(g==='expenses') state.draft.expenses.push({label:'',amount:''});
+      render();
+    }; })(addBtns[a]);
+  }
+
+  var uploadBox = document.getElementById('uploadBox');
+  var fileInput = document.getElementById('fileInput');
+  if(uploadBox){
+    uploadBox.onclick = function(){ fileInput.click(); };
+    uploadBox.ondragover = function(e){ e.preventDefault(); uploadBox.style.borderColor='var(--green)'; };
+    uploadBox.ondragleave = function(){ uploadBox.style.borderColor=''; };
+    uploadBox.ondrop = async function(e){ e.preventDefault(); uploadBox.style.borderColor=''; await handleFiles(e.dataTransfer.files); };
+  }
+  if(fileInput) fileInput.onchange = async function(){ await handleFiles(fileInput.files); fileInput.value=''; };
+
+  var rmImgBtns = c.querySelectorAll('[data-rm-img]');
+  for(var ri=0; ri<rmImgBtns.length; ri++){ (function(btn){ btn.onclick = function(){ state.draft.images.splice(parseInt(btn.dataset.rmImg,10),1); render(); }; })(rmImgBtns[ri]); }
+  var rmFileBtns = c.querySelectorAll('[data-rm-file]');
+  for(var rf=0; rf<rmFileBtns.length; rf++){ (function(btn){ btn.onclick = function(){ state.draft.files.splice(parseInt(btn.dataset.rmFile,10),1); render(); }; })(rmFileBtns[rf]); }
+
+  var fillImgBtns = c.querySelectorAll('[data-fill-img]');
+  for(var fi=0; fi<fillImgBtns.length; fi++){
+    (function(btn){ btn.onclick = async function(){
+      var idx = parseInt(btn.dataset.fillImg,10);
+      if(!confirmOverwriteIfNeeded()) return;
+      btn.disabled = true; btn.textContent = 'Reading...';
+      try{
+        var ex = await extractReportFromImage(state.draft.images[idx]);
+        mergeExtracted(state.draft, ex);
+        await logAction('image_auto_fill', 'Auto-filled from photo ('+(state.draft.branch||'—')+', '+state.draft.date+')');
+        render();
+      }catch(e){
+        await logAction('error', 'Auto-fill from photo failed: '+(e.message||e));
+        alert("Couldn't read that photo automatically. Please enter the figures manually.");
+        btn.disabled = false; btn.textContent = 'Auto-fill from this ✨';
+      }
+    }; })(fillImgBtns[fi]);
+  }
+  var fillFileBtns = c.querySelectorAll('[data-fill-file]');
+  for(var ff=0; ff<fillFileBtns.length; ff++){
+    (function(btn){ btn.onclick = async function(){
+      var idx = parseInt(btn.dataset.fillFile,10);
+      if(!confirmOverwriteIfNeeded()) return;
+      btn.disabled = true; btn.textContent = 'Reading...';
+      try{
+        var ex = await extractReportFromCSV(state.draft.files[idx].csv);
+        mergeExtracted(state.draft, ex);
+        await logAction('csv_auto_fill', 'Auto-filled from CSV "'+state.draft.files[idx].name+'" ('+(state.draft.branch||'—')+', '+state.draft.date+')');
+        render();
+      }catch(e){
+        await logAction('error', 'Auto-fill from CSV failed: '+(e.message||e));
+        alert("Couldn't read that file automatically. Please enter the figures manually.");
+        btn.disabled = false; btn.textContent = 'Auto-fill from this ✨';
+      }
+    }; })(fillFileBtns[ff]);
+  }
+
+  var saveBtn = document.getElementById('saveReport');
+  if(saveBtn) saveBtn.onclick = async function(){
+    if(!state.draft.branch){ alert('Please choose a branch.'); return; }
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+    if(state.editingId) state.draft.id = state.editingId;
+    var wasEdit = !!state.editingId;
+    var ok = await saveReport(state.draft, wasEdit);
+    if(ok){
+      state.editingId = null;
+      var nextBranch = (state.currentUser.role==='cashier') ? state.currentUser.branch : state.draft.branch;
+      state.draft = blankReport(nextBranch);
+      state.draft.preparedBy = state.currentUser.name;
+      await loadReports();
+      state.tab = 'history';
+      state.openHistoryId = null;
+      render();
+    } else { saveBtn.disabled = false; saveBtn.textContent = 'Save report'; }
+  };
+  var clearBtn = document.getElementById('clearDraft');
+  if(clearBtn) clearBtn.onclick = function(){ if(confirm('Clear all fields in this form?')){ var b=state.draft.branch; state.draft = blankReport(b); state.draft.preparedBy = state.currentUser.name; render(); } };
+  var cancelBtn = document.getElementById('cancelEdit');
+  if(cancelBtn) cancelBtn.onclick = function(){ state.editingId=null; state.draft = blankReport(state.currentUser.branch); state.tab='history'; render(); };
+}
+
+function confirmOverwriteIfNeeded(){
+  var r = state.draft;
+  var hasData = r.collectors.some(function(x){return x.collection;}) || r.releases.some(function(x){return x.loan;}) || r.expenses.some(function(x){return x.amount;});
+  if(hasData) return confirm('This will overwrite fields that are found in the upload. Continue?');
+  return true;
+}
+
+function attachHistoryHandlers(){
+  var toggles = document.querySelectorAll('[data-toggle]');
+  for(var i=0;i<toggles.length;i++){ (function(el){ el.onclick = function(){ var id = el.dataset.toggle; state.openHistoryId = state.openHistoryId===id? null : id; render(); }; })(toggles[i]); }
+  var editBtns = document.querySelectorAll('[data-edit-report]');
+  for(var j=0;j<editBtns.length;j++){
+    (function(btn){ btn.onclick = function(){
+      var r = null;
+      for(var k=0;k<state.reports.length;k++){ if(state.reports[k].id===btn.dataset.editReport){ r=state.reports[k]; break; } }
+      if(r){ state.draft = JSON.parse(JSON.stringify(r)); state.draft._review = {header:false,collectors:false,releases:false,expenses:false,denom:false}; if(!state.draft.files) state.draft.files=[]; state.editingId = r.id; state.tab='new'; render(); }
+    }; })(editBtns[j]);
+  }
+  var delBtns = document.querySelectorAll('[data-del-report]');
+  for(var d=0; d<delBtns.length; d++){ (function(btn){ btn.onclick = function(){ if(confirm('Delete this report? This cannot be undone.')) deleteReport(btn.dataset.delReport); }; })(delBtns[d]); }
+  var clearDateBtn = document.getElementById('clearDateFilter');
+  if(clearDateBtn) clearDateBtn.onclick = function(){ state.historyDateFilter = null; render(); };
+}
+
+function attachWeeklyHandlers(){
+  var wsInput = document.getElementById('weekStartInput');
+  if(wsInput) wsInput.onchange = function(){ state.weekStart = mondayOf(wsInput.value); render(); };
+  var prev = document.getElementById('prevWeek');
+  if(prev) prev.onclick = function(){ var d=new Date(state.weekStart+'T00:00:00'); d.setDate(d.getDate()-7); state.weekStart=d.toISOString().slice(0,10); render(); };
+  var next = document.getElementById('nextWeek');
+  if(next) next.onclick = function(){ var d=new Date(state.weekStart+'T00:00:00'); d.setDate(d.getDate()+7); state.weekStart=d.toISOString().slice(0,10); render(); };
+}
+
+async function handleFiles(fileList){
+  var files = Array.prototype.slice.call(fileList);
+  for(var i=0;i<files.length;i++){
+    var f = files[i];
+    if(f.type.indexOf('image/')===0){
+      try{ var dataUrl = await resizeImage(f); state.draft.images.push(dataUrl); }catch(e){}
+    } else if(/\.csv$/i.test(f.name)){
+      try{ var csv = await readTextFile(f); state.draft.files.push({name:f.name, csv:csv}); }
+      catch(e){ alert('Could not read '+f.name); }
+    } else {
+      alert(f.name+' is not supported yet. Please upload an image or a .csv file.');
+    }
+  }
+  render();
+}
+
+/* ============================== INIT ============================== */
+function showFatalError(err){
+  var root = document.getElementById('appRoot');
+  if(!root) return;
+  root.innerHTML = '<div style="padding:40px; color:#E9E5D6; font-family:sans-serif; max-width:500px; margin:0 auto;">'+
+    '<h2 style="color:#C7DFC9;">The app hit a problem while starting up.</h2>'+
+    '<p style="color:#8FA093;">Try reloading. If it keeps happening, the error was:</p>'+
+    '<pre style="white-space:pre-wrap; color:#E2825B; font-size:12px;">'+esc(err && err.message || err)+'</pre></div>';
+}
+window.addEventListener('error', function(e){
+  var root = document.getElementById('appRoot');
+  if(root && !root.innerHTML.trim()) showFatalError(e.error || e.message);
+});
+
+async function init(){
+  // Give the Firebase module script a chance to connect (max 4s), then proceed either way.
+  await Promise.race([ window.storageReady, new Promise(function(r){ setTimeout(r, 4000); }) ]);
+  await loadBranches();
+  await loadProfile();
+  await loadReports();
+  state.usingFallbackData = !hasStorage();
+  render();
+}
+init().catch(showFatalError);
+
+})();
+</script>
+
+<!-- =====================================================================
+     FIREBASE SETUP — fill in your config below, then this file is done.
+     See SETUP.md (in the same folder) for step-by-step instructions on
+     creating a free Firebase project and getting these values.
+     ===================================================================== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, deleteDoc,
+    collection, query, where, getDocs, documentId
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  // 1) Paste your Firebase project's config here (from Firebase Console >
+  //    Project settings > General > Your apps > Web app).
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJY7C5OFZGCuoUpXHMU7P8bUfPH9cs_1Y",
+    authDomain: "cashier-ledger.firebaseapp.com",
+    projectId: "cashier-ledger",
+    storageBucket: "cashier-ledger.firebasestorage.app",
+    messagingSenderId: "909971740365",
+    appId: "1:909971740365:web:b5944c2bfe4a9b1a93bb84"
+  };
+
+  try{
+    // If the config above hasn't been filled in, skip connecting — the app
+    // will fall back to its built-in sample data instead of hanging.
+    if(firebaseConfig.apiKey.indexOf('PASTE_') === 0){
+      console.warn('Firebase config not filled in yet — using sample data.');
+      window.__markStorageReady(false);
+    } else {
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const kv = collection(db, 'kv');
+
+      window.storage = {
+        async get(key, shared){
+          const snap = await getDoc(doc(kv, key));
+          if(!snap.exists()) throw new Error('not found: '+key);
+          const data = snap.data();
+          return { key, value: data.value, shared: !!data.shared };
+        },
+        async set(key, value, shared){
+          await setDoc(doc(kv, key), { value: value, shared: !!shared, updatedAt: Date.now() });
+          return { key, value, shared };
+        },
+        async delete(key, shared){
+          await deleteDoc(doc(kv, key));
+          return { key, deleted: true, shared };
+        },
+        async list(prefix, shared){
+          const q = query(kv, where(documentId(), '>=', prefix), where(documentId(), '<', prefix + '\uf8ff'));
+          const snaps = await getDocs(q);
+          const keys = [];
+          snaps.forEach(function(d){ keys.push(d.id); });
+          return { keys: keys, prefix: prefix, shared: shared };
+        }
+      };
+      window.__markStorageReady(true);
+    }
+  }catch(err){
+    console.error('Firebase failed to initialize:', err);
+    window.__markStorageReady(false);
+  }
+</script>
+
+</body>
+</html>
